@@ -1,0 +1,20 @@
+{
+  "name": "opportunity-radar-render-service",
+  "version": "1.0.0",
+  "description": "Production-grade Playwright rendering microservice for the Opportunity Radar AI Agent. Renders JavaScript-heavy pages on demand and returns fully rendered HTML, for use as an n8n HTTP fallback whenever plain HTTP scraping fails.",
+  "main": "src/index.js",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "NODE_ENV=development node src/index.js",
+    "postinstall": "playwright install --with-deps chromium"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "playwright": "^1.46.0"
+  }
+}

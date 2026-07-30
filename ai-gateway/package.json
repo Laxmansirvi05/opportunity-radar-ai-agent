@@ -1,0 +1,18 @@
+{
+  "name": "ai-gateway",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "check": "node --check server.js && node --check src/*.js && node --check src/providers/*.js && node --check src/tasks/*.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}
