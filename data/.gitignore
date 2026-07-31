@@ -1,0 +1,15 @@
+# data/.gitignore
+# Prevents secrets and generated artifacts from being committed.
+
+# Runtime environment — contains database credentials
+.env
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS artifacts
+.DS_Store
+Thumbs.db

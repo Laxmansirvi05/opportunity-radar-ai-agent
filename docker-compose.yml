@@ -1,0 +1,53 @@
+# docker-compose.yml
+# Local development infrastructure for Opportunity Radar.
+# Provides PostgreSQL 16 (with pgvector extension built-in) and Redis 7.
+#
+# Usage:
+#   docker compose up -d          # Start all services in background
+#   docker compose down           # Stop and remove containers (data persists in volumes)
+#   docker compose down -v        # Stop and remove containers AND volumes (full reset)
+#   docker compose logs -f        # Follow logs for all services
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: opportunity-radar-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: opportunity_radar
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d opportunity_radar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: opportunity-radar-redis
+    restart: unless-stopped
+    # Append-only file persistence enabled for durability across restarts.
+    # No password set for local development. Set REDIS_PASSWORD in .env for staging/prod.
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
