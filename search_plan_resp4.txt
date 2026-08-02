@@ -1,1 +1,0 @@
-{"planId":"3a73a782-dcc6-4a42-a58f-2f406610421e","candidateId":"fcda4ac6-1559-431e-8f0d-350f84ec6945","queryCount":15,"planVersion":"1.0.0","planHash":"899985fafbfecac4"}

@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Real .env files (keep .env.example files tracked)
+.env
+**/.env
+!**/.env.example
+
+# Test scratch artifacts
+scratch/
+tmp-test-artifacts/
+
+# Redis persistence
+dump.rdb
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build output
+dist/
+build/
