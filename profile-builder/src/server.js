@@ -12,12 +12,14 @@ app.use(express.json({ limit: '1mb' }));
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
+const { getCandidateProfile } = require('../../data/src/repositories/candidate-repository');
 
 app.post('/profile/build', async (req, res) => {
   try {
     // buildProfile accepts the parsed resume object directly
     const result = await buildProfile(req.body);
-    res.status(200).json(result);
+    const profileRow = await getCandidateProfile(result.candidateId);
+    res.status(200).json({ ...result, cip: profileRow.profile_json });
   } catch (error) {
     if (error instanceof ProfileBuildError) {
       // Distinguish between bad input (400) and internal failures (500)

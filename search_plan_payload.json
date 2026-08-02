@@ -1,0 +1,415 @@
+{
+  "candidateId": "fcda4ac6-1559-431e-8f0d-350f84ec6945",
+  "cip": {
+    "meta": {
+      "builtAt": "2024-07-20T12:00:00Z",
+      "resumeHash": "6bf6c3c60f4b4d24bda1baf2b086929efac3e32c3fc333be1850bdc08e3a2346",
+      "modelVersion": "gemini-1.5-flash",
+      "schemaVersion": "2.0.0",
+      "overallConfidence": 0.925
+    },
+    "literal": {
+      "email": "alex.mercer@example.com",
+      "phone": "+1-555-019-8372",
+      "awards": [],
+      "fullName": "Alex Mercer",
+      "projects": [],
+      "education": [
+        {
+          "gpa": null,
+          "field": "Artificial Intelligence",
+          "degree": "Master of Science in Computer Science",
+          "endYear": 2014,
+          "startYear": 2012,
+          "institution": "University of Texas at Austin"
+        },
+        {
+          "gpa": null,
+          "field": "Computer Science",
+          "degree": "Bachelor of Science",
+          "endYear": 2012,
+          "startYear": 2008,
+          "institution": "University of Texas at Austin"
+        }
+      ],
+      "githubUrl": null,
+      "languages": [],
+      "rawSkills": [
+        "Python",
+        "TypeScript",
+        "Node.js",
+        "Go",
+        "PostgreSQL",
+        "Redis",
+        "Elasticsearch",
+        "Milvus",
+        "pgvector",
+        "Kubernetes",
+        "Docker",
+        "AWS",
+        "GCP",
+        "Terraform",
+        "PyTorch",
+        "TensorFlow",
+        "LangChain",
+        "LLMOps",
+        "RAG",
+        "Distributed Systems",
+        "Microservices",
+        "System Architecture"
+      ],
+      "experience": [
+        {
+          "title": "Senior AI Systems Architect",
+          "company": "TechNova Solutions",
+          "endDate": "Present",
+          "startDate": "2021-03",
+          "description": "Architected and deployed a multi-region generative AI gateway processing 5M+ requests daily. Designed a hybrid vector-graph RAG pipeline that improved semantic retrieval accuracy by 45%. Led a team of 8 engineers migrating legacy NLP services to a microservices architecture using Kubernetes, FastAPI, and PostgreSQL. Implemented intelligent caching layers with Redis and PgBouncer, reducing LLM API costs by $20k/month.",
+          "technologies": []
+        },
+        {
+          "title": "Machine Learning Engineer",
+          "company": "Quantum Data Corp",
+          "endDate": "2021-02",
+          "startDate": "2017-06",
+          "description": "Developed predictive models for customer churn resulting in a 15% increase in retention. Built automated data pipelines using Apache Airflow and PySpark. Deployed containerized ML endpoints using Docker and AWS SageMaker. Collaborated with product managers to define KPIs and deliver A/B testing frameworks for recommendation algorithms.",
+          "technologies": []
+        },
+        {
+          "title": "Backend Software Developer",
+          "company": "Innovate Web Services",
+          "endDate": "2017-05",
+          "startDate": "2014-08",
+          "description": "Maintained and scaled RESTful APIs using Node.js and Express. Optimized complex SQL queries, improving database response times by 30%. Integrated third-party payment gateways and authentication systems (OAuth 2.0). Implemented CI/CD pipelines using Jenkins and GitHub Actions.",
+          "technologies": []
+        }
+      ],
+      "linkedinUrl": null,
+      "portfolioUrl": null,
+      "publications": [],
+      "certifications": [
+        "AWS Certified Solutions Architect – Professional",
+        "Google Professional Machine Learning Engineer"
+      ],
+      "preferredLocations": []
+    },
+    "inferred": {
+      "careerStage": {
+        "value": "senior",
+        "evidence": [
+          "Senior Staff AI Engineer with 10+ years of experience",
+          "Senior AI Systems Architect",
+          "Master of Science in Computer Science"
+        ],
+        "confidence": 1
+      },
+      "searchIntent": "Seeking a senior-level AI Systems Architect or MLOps Engineer role focused on designing and deploying scalable generative AI and machine learning infrastructure.",
+      "inferredRoles": [
+        {
+          "role": "AI Systems Architect",
+          "evidence": [
+            "Senior AI Systems Architect",
+            "Architected and deployed a multi-region generative AI gateway",
+            "Designed a hybrid vector-graph RAG pipeline"
+          ],
+          "confidence": 1
+        },
+        {
+          "role": "Machine Learning Engineer",
+          "evidence": [
+            "Machine Learning Engineer",
+            "Developed predictive models for customer churn",
+            "Deployed containerized ML endpoints using Docker and AWS SageMaker"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "role": "MLOps Engineer",
+          "evidence": [
+            "MLOps",
+            "Implemented intelligent caching layers with Redis and PgBouncer, reducing LLM API costs",
+            "Deployed containerized ML endpoints using Docker and AWS SageMaker"
+          ],
+          "confidence": 0.8
+        },
+        {
+          "role": "Backend Engineer",
+          "evidence": [
+            "Backend Software Developer",
+            "Maintained and scaled RESTful APIs using Node.js and Express",
+            "Optimized complex SQL queries"
+          ],
+          "confidence": 0.7
+        }
+      ],
+      "searchKeywords": [
+        "AI Systems Architect",
+        "MLOps Engineer",
+        "Generative AI",
+        "Large Language Models",
+        "Distributed Systems",
+        "Kubernetes",
+        "AWS",
+        "GCP",
+        "RAG",
+        "Vector Search",
+        "PyTorch",
+        "TensorFlow",
+        "LangChain",
+        "PostgreSQL",
+        "Redis",
+        "Terraform"
+      ],
+      "canonicalSkills": [
+        {
+          "raw": "Python",
+          "category": "language",
+          "canonical": "Python",
+          "confidence": 1
+        },
+        {
+          "raw": "TypeScript",
+          "category": "language",
+          "canonical": "TypeScript",
+          "confidence": 1
+        },
+        {
+          "raw": "Node.js",
+          "category": "framework",
+          "canonical": "Node.js",
+          "confidence": 1
+        },
+        {
+          "raw": "Go",
+          "category": "language",
+          "canonical": "Go",
+          "confidence": 1
+        },
+        {
+          "raw": "PostgreSQL",
+          "category": "platform",
+          "canonical": "PostgreSQL",
+          "confidence": 1
+        },
+        {
+          "raw": "Redis",
+          "category": "platform",
+          "canonical": "Redis",
+          "confidence": 1
+        },
+        {
+          "raw": "Elasticsearch",
+          "category": "platform",
+          "canonical": "Elasticsearch",
+          "confidence": 1
+        },
+        {
+          "raw": "Milvus",
+          "category": "platform",
+          "canonical": "Milvus",
+          "confidence": 1
+        },
+        {
+          "raw": "pgvector",
+          "category": "tool",
+          "canonical": "pgvector",
+          "confidence": 1
+        },
+        {
+          "raw": "Kubernetes",
+          "category": "platform",
+          "canonical": "Kubernetes",
+          "confidence": 1
+        },
+        {
+          "raw": "Docker",
+          "category": "tool",
+          "canonical": "Docker",
+          "confidence": 1
+        },
+        {
+          "raw": "AWS",
+          "category": "platform",
+          "canonical": "AWS",
+          "confidence": 1
+        },
+        {
+          "raw": "GCP",
+          "category": "platform",
+          "canonical": "GCP",
+          "confidence": 1
+        },
+        {
+          "raw": "Terraform",
+          "category": "tool",
+          "canonical": "Terraform",
+          "confidence": 1
+        },
+        {
+          "raw": "PyTorch",
+          "category": "framework",
+          "canonical": "PyTorch",
+          "confidence": 1
+        },
+        {
+          "raw": "TensorFlow",
+          "category": "framework",
+          "canonical": "TensorFlow",
+          "confidence": 1
+        },
+        {
+          "raw": "LangChain",
+          "category": "framework",
+          "canonical": "LangChain",
+          "confidence": 1
+        },
+        {
+          "raw": "LLMOps",
+          "category": "domain",
+          "canonical": "LLMOps",
+          "confidence": 1
+        },
+        {
+          "raw": "RAG",
+          "category": "domain",
+          "canonical": "RAG",
+          "confidence": 1
+        },
+        {
+          "raw": "Distributed Systems",
+          "category": "domain",
+          "canonical": "Distributed Systems",
+          "confidence": 1
+        },
+        {
+          "raw": "Microservices",
+          "category": "domain",
+          "canonical": "Microservices",
+          "confidence": 1
+        },
+        {
+          "raw": "System Architecture",
+          "category": "domain",
+          "canonical": "System Architecture",
+          "confidence": 1
+        },
+        {
+          "raw": "generative AI",
+          "category": "domain",
+          "canonical": "Generative AI",
+          "confidence": 0.9
+        },
+        {
+          "raw": "NLP services",
+          "category": "domain",
+          "canonical": "NLP",
+          "confidence": 0.8
+        },
+        {
+          "raw": "Apache Airflow",
+          "category": "tool",
+          "canonical": "Apache Airflow",
+          "confidence": 0.9
+        },
+        {
+          "raw": "PySpark",
+          "category": "framework",
+          "canonical": "PySpark",
+          "confidence": 0.9
+        },
+        {
+          "raw": "AWS SageMaker",
+          "category": "platform",
+          "canonical": "AWS SageMaker",
+          "confidence": 0.9
+        },
+        {
+          "raw": "RESTful APIs",
+          "category": "domain",
+          "canonical": "RESTful APIs",
+          "confidence": 0.8
+        },
+        {
+          "raw": "Express",
+          "category": "framework",
+          "canonical": "Express.js",
+          "confidence": 0.8
+        },
+        {
+          "raw": "SQL queries",
+          "category": "language",
+          "canonical": "SQL",
+          "confidence": 0.8
+        },
+        {
+          "raw": "OAuth 2.0",
+          "category": "tool",
+          "canonical": "OAuth 2.0",
+          "confidence": 0.8
+        },
+        {
+          "raw": "CI/CD pipelines",
+          "category": "domain",
+          "canonical": "CI/CD",
+          "confidence": 0.8
+        },
+        {
+          "raw": "Jenkins",
+          "category": "tool",
+          "canonical": "Jenkins",
+          "confidence": 0.8
+        },
+        {
+          "raw": "GitHub Actions",
+          "category": "tool",
+          "canonical": "GitHub Actions",
+          "confidence": 0.8
+        },
+        {
+          "raw": "FastAPI",
+          "category": "framework",
+          "canonical": "FastAPI",
+          "confidence": 0.8
+        },
+        {
+          "raw": "PgBouncer",
+          "category": "tool",
+          "canonical": "PgBouncer",
+          "confidence": 0.8
+        }
+      ],
+      "careerDirection": {
+        "primary": "AI/ML Systems Architecture",
+        "adjacent": [
+          "MLOps",
+          "Distributed Systems Engineering",
+          "Generative AI Development",
+          "Cloud Architecture"
+        ],
+        "evidence": [
+          "Senior Staff AI Engineer with 10+ years of experience designing scalable distributed systems and deploying large language models into production.",
+          "Proven track record of leading cross-functional teams to build enterprise-grade ML infrastructure.",
+          "Passionate about MLOps, vector search, and multi-agent orchestration architectures.",
+          "Senior AI Systems Architect",
+          "Architected and deployed a multi-region generative AI gateway",
+          "Designed a hybrid vector-graph RAG pipeline"
+        ],
+        "confidence": 0.95
+      },
+      "openToRelocation": {
+        "value": true,
+        "evidence": [
+          "I am open to relocation anywhere in the US."
+        ],
+        "confidence": 1
+      },
+      "workAuthorization": {
+        "value": "citizen",
+        "evidence": [
+          "I am a US Citizen (permanent resident)."
+        ],
+        "confidence": 1
+      }
+    }
+  }
+}

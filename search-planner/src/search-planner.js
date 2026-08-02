@@ -65,21 +65,30 @@ function extractCipComponents(cip) {
     throw new SearchPlanError('INPUT_INVALID', 'CIP must have meta, literal, and inferred sections');
   }
 
-  // Career stage from meta.
-  const careerStage = cip.meta.careerStage || 'early-career';
+  // Career stage — CIP v2.0.0: cip.inferred.careerStage.value
+  const careerStage = (cip.inferred.careerStage && cip.inferred.careerStage.value) || 'early-career';
 
-  // Literal skills → normalize and categorize.
-  const rawSkills   = cip.literal.skills || [];
-  const skillCats   = categorizeSkills(rawSkills);
-  const skills      = prioritizedSkillList(rawSkills);
+  // Skills — CIP v2.0.0: cip.literal.rawSkills (array of plain strings)
+  const rawSkills = cip.literal.rawSkills || [];
+  // Pass as plain strings; categorizeSkills handles both `{ name, category }` objects and plain strings.
+  const skillCats = categorizeSkills(rawSkills);
+  const skills    = prioritizedSkillList(rawSkills);
 
-  // Roles from work experience.
-  const rawRoles    = (cip.literal.workExperience || []).map((w) => w.title || w.role || '').filter(Boolean);
-  // Adjacent roles from career trajectory inference.
-  const trajectory  = cip.inferred.careerTrajectory || {};
+  // Domain skills — CIP v2.0.0: cip.inferred.canonicalSkills where category === 'domain'
+  // canonicalSkills shape: [{ canonical, raw, category, confidence }]
+  const canonicalSkills = cip.inferred.canonicalSkills || [];
+  const domainSkills = canonicalSkills
+    .filter((s) => s.category === 'domain')
+    .map((s) => s.canonical);
+
+  // Roles from work experience — CIP v2.0.0: cip.literal.experience[].title
+  const rawRoles = (cip.literal.experience || []).map((w) => w.title || w.role || '').filter(Boolean);
+
+  // Adjacent roles — CIP v2.0.0: cip.inferred.careerDirection.{ primary, adjacent[] }
+  const careerDirection = cip.inferred.careerDirection || {};
   const adjacentRoles = [
-    trajectory.primaryDirection,
-    ...(trajectory.adjacentRoles || []),
+    careerDirection.primary,
+    ...(careerDirection.adjacent || []),
   ].filter(Boolean);
 
   // Normalize all roles.
@@ -101,7 +110,7 @@ function extractCipComponents(cip) {
   return {
     careerStage,
     skills,
-    domainSkills: skillCats.domain,
+    domainSkills,
     titleVariants,
     adjacentRoles: allRoles,
     normalizedLocations: normalizedLocs,
@@ -110,6 +119,7 @@ function extractCipComponents(cip) {
     profileVersion: cip.meta.schemaVersion || '2.0.0',
   };
 }
+
 
 /**
  * Generate a deterministic plan hash from CIP components.
