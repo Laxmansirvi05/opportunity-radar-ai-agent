@@ -3,6 +3,13 @@
 const express = require('express');
 const { buildSearchPlan, SearchPlanError } = require('./search-planner');
 
+// Injected lazily to avoid circular-require during unit tests.
+let _repo = null;
+function getRepo() {
+  if (!_repo) _repo = require('../../data/src/repositories/search-plan-repository');
+  return _repo;
+}
+
 const app = express();
 const PORT = process.env.PORT || 4200;
 
@@ -21,12 +28,24 @@ app.post('/search-plan/build', async (req, res) => {
     }
 
     const result = await buildSearchPlan({ candidateId, cip });
-    res.status(200).json(result);
+
+    // Fetch the full plan_json so n8n can fan out directly without a second round-trip.
+    const row = await getRepo().getSearchPlanById(result.planId);
+    const queries = (row && row.plan_json && row.plan_json.queries) || [];
+
+    res.status(200).json({
+      planId:      result.planId,
+      candidateId: result.candidateId,
+      queryCount:  result.queryCount,
+      planVersion: result.planVersion,
+      planHash:    result.planHash,
+      queries,
+    });
   } catch (error) {
     if (error instanceof SearchPlanError) {
       res.status(400).json({
         error: {
-          code: error.code,
+          code:    error.code,
           message: error.message,
           context: error.context || {}
         }
@@ -35,7 +54,7 @@ app.post('/search-plan/build', async (req, res) => {
       console.error('Unhandled server error:', error);
       res.status(500).json({
         error: {
-          code: 'INTERNAL_SERVER_ERROR',
+          code:    'INTERNAL_SERVER_ERROR',
           message: 'An unexpected error occurred'
         }
       });
