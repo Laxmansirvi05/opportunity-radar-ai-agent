@@ -1,0 +1,19 @@
+{
+  "name": "@opportunity-radar/execution-fabric",
+  "version": "3.0.0",
+  "description": "Execution Plane: orchestrates search plan execution via Provider Abstraction Layer with circuit breaking, rate limiting, and event logging.",
+  "main": "src/index.js",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "scripts": {
+    "check": "node --check src/config.js && node --check src/circuit-breaker.js && node --check src/rate-limiter.js && node --check src/retry-policy.js && node --check src/event-logger.js && node --check src/validator.js && node --check src/providers/provider-interface.js && node --check src/providers/adapters/greenhouse.js && node --check src/providers/adapters/lever.js && node --check src/providers/adapters/ashby.js && node --check src/providers/adapters/web-render.js && node --check src/providers/index.js && node --check src/worker.js && node --check src/dispatcher.js && node --check src/orchestrator.js && node --check src/index.js",
+    "test": "node --test test/circuit-breaker.test.js test/rate-limiter.test.js test/retry-policy.test.js test/validator.test.js test/worker.test.js test/orchestrator.test.js test/integration.test.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {}
+}

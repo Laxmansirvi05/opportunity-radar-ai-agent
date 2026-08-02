@@ -1,0 +1,15 @@
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "summary": "Experienced software engineer specializing in backend development and cloud architecture.",
+  "experience": [
+    {
+      "company": "Tech Corp",
+      "title": "Software Engineer",
+      "startDate": "2020-01",
+      "endDate": "2024-01",
+      "description": "Developed backend systems using Node.js and PostgreSQL."
+    }
+  ],
+  "skills": ["JavaScript", "Node.js", "PostgreSQL", "AWS"]
+}

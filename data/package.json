@@ -11,7 +11,7 @@
   "scripts": {
     "migrate": "node src/migrate.js",
     "health": "node src/health-check.js",
-    "check": "node --check src/config.js && node --check src/db.js && node --check src/redis.js && node --check src/migrate.js && node --check src/health-check.js && node --check src/index.js && node --check src/schemas/candidate-profile-schema.js && node --check src/repositories/candidate-repository.js"
+    "check": "node --check src/config.js && node --check src/db.js && node --check src/redis.js && node --check src/migrate.js && node --check src/health-check.js && node --check src/index.js && node --check src/schemas/candidate-profile-schema.js && node --check src/repositories/candidate-repository.js && node --check src/repositories/search-plan-repository.js && node --check src/repositories/opportunity-repository.js && node --check src/repositories/execution-run-repository.js && node --check src/repositories/dedup-repository.js && node --check src/repositories/event-log-repository.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
