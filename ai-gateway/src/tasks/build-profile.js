@@ -152,10 +152,13 @@ function validateInput(value) {
  * @returns {Readonly<CIP>} - Frozen, validated CIP object.
  */
 function parseAndValidate(text) {
+  console.error('RAW OUTPUT FROM AI:', text);
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    const cleanedText = text.replace(/^```(json)?|```$/gm, '').trim();
+    parsed = JSON.parse(cleanedText);
   } catch (cause) {
+    console.error('JSON PARSE ERROR:', cause.message);
     throw new GatewayError('TASK_OUTPUT_INVALID', 'build_profile: model returned invalid JSON', {
       status: 502,
       cause,
@@ -166,6 +169,7 @@ function parseAndValidate(text) {
     return validateCandidateProfile(parsed);
   } catch (cause) {
     if (cause instanceof ProfileValidationError) {
+      console.error('Validation Error Details:', cause.message, JSON.stringify(parsed, null, 2));
       throw new GatewayError('TASK_OUTPUT_INVALID', `build_profile: ${cause.message}`, {
         status: 502,
         cause,

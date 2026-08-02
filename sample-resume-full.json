@@ -1,0 +1,66 @@
+{
+  "name": "Alex Mercer",
+  "email": "alex.mercer@example.com",
+  "phone": "+1-555-019-8372",
+  "location": "San Francisco, CA",
+  "summary": "Senior Staff AI Engineer with 10+ years of experience designing scalable distributed systems and deploying large language models into production. Proven track record of leading cross-functional teams to build enterprise-grade ML infrastructure. Passionate about MLOps, vector search, and multi-agent orchestration architectures. I am a US Citizen (permanent resident). I am open to relocation anywhere in the US.",
+  "experience": [
+    {
+      "company": "TechNova Solutions",
+      "title": "Senior AI Systems Architect",
+      "startDate": "2021-03",
+      "endDate": "Present",
+      "location": "San Francisco, CA",
+      "description": "Architected and deployed a multi-region generative AI gateway processing 5M+ requests daily. Designed a hybrid vector-graph RAG pipeline that improved semantic retrieval accuracy by 45%. Led a team of 8 engineers migrating legacy NLP services to a microservices architecture using Kubernetes, FastAPI, and PostgreSQL. Implemented intelligent caching layers with Redis and PgBouncer, reducing LLM API costs by $20k/month."
+    },
+    {
+      "company": "Quantum Data Corp",
+      "title": "Machine Learning Engineer",
+      "startDate": "2017-06",
+      "endDate": "2021-02",
+      "location": "Seattle, WA",
+      "description": "Developed predictive models for customer churn resulting in a 15% increase in retention. Built automated data pipelines using Apache Airflow and PySpark. Deployed containerized ML endpoints using Docker and AWS SageMaker. Collaborated with product managers to define KPIs and deliver A/B testing frameworks for recommendation algorithms."
+    },
+    {
+      "company": "Innovate Web Services",
+      "title": "Backend Software Developer",
+      "startDate": "2014-08",
+      "endDate": "2017-05",
+      "location": "Austin, TX",
+      "description": "Maintained and scaled RESTful APIs using Node.js and Express. Optimized complex SQL queries, improving database response times by 30%. Integrated third-party payment gateways and authentication systems (OAuth 2.0). Implemented CI/CD pipelines using Jenkins and GitHub Actions."
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of Texas at Austin",
+      "degree": "Master of Science in Computer Science",
+      "fieldOfStudy": "Artificial Intelligence",
+      "startDate": "2012-08",
+      "endDate": "2014-05"
+    },
+    {
+      "institution": "University of Texas at Austin",
+      "degree": "Bachelor of Science",
+      "fieldOfStudy": "Computer Science",
+      "startDate": "2008-08",
+      "endDate": "2012-05"
+    }
+  ],
+  "skills": [
+    "Python", "TypeScript", "Node.js", "Go",
+    "PostgreSQL", "Redis", "Elasticsearch", "Milvus", "pgvector",
+    "Kubernetes", "Docker", "AWS", "GCP", "Terraform",
+    "PyTorch", "TensorFlow", "LangChain", "LLMOps", "RAG",
+    "Distributed Systems", "Microservices", "System Architecture"
+  ],
+  "certifications": [
+    {
+      "name": "AWS Certified Solutions Architect – Professional",
+      "date": "2022-11"
+    },
+    {
+      "name": "Google Professional Machine Learning Engineer",
+      "date": "2023-05"
+    }
+  ]
+}
