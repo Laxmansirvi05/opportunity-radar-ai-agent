@@ -64,9 +64,17 @@ function buildTier1Queries({ titleVariants, skills, locations, exclusions, caree
   const queries = [];
   const topSkills = skills.slice(0, config.maxQueriesPerTier);
 
+  // Stage-specific keyword appended to each Tier 1 query.
+  // Senior candidates get no junior/entry modifier — the title variants carry the seniority signal.
+  const stageKeyword = careerStage === 'student'       ? 'internship'
+                     : careerStage === 'early-career'  ? 'entry level'
+                     : null; // senior / mid / unknown — no modifier
+
   for (const skill of topSkills) {
     const roles    = titleVariants.slice(0, 2); // top 2 title variants per skill
-    const keywords = [skill, ...roles.slice(0, 1), careerStage === 'student' ? 'internship' : 'entry level'];
+    const keywords = stageKeyword
+      ? [skill, ...roles.slice(0, 1), stageKeyword]
+      : [skill, ...roles.slice(0, 1)];
     queries.push({
       queryId:    queryId(1, 'core_skill', roles, [skill]),
       tier:       1,
@@ -137,11 +145,20 @@ function buildTier2Queries({ adjacentRoles, skills, locations, exclusions, caree
  * @returns {object[]}
  */
 function buildTier3Queries({ domainSkills, titleVariants, locations, exclusions, careerStage, freshness }) {
-  const queries   = [];
-  const stageWord = careerStage === 'student' ? 'internship' : 'new grad';
-  const domains   = domainSkills.slice(0, config.maxQueriesPerTier);
+  const queries = [];
+
+  // Stage-specific discovery word injected into Tier 3 keyword list.
+  // Senior candidates get no junior/intern term — the domain skill carries the signal.
+  const stageWord = careerStage === 'student'      ? 'internship'
+                  : careerStage === 'early-career' ? 'new grad'
+                  : null; // senior / mid / unknown — no modifier
+
+  const domains = domainSkills.slice(0, config.maxQueriesPerTier);
 
   for (const domain of domains) {
+    const keywords = stageWord
+      ? [domain, stageWord, ...titleVariants.slice(0, 1)]
+      : [domain, ...titleVariants.slice(0, 1)];
     queries.push({
       queryId:    queryId(3, 'domain_stage', titleVariants.slice(0, 1), [domain]),
       tier:       3,
@@ -149,7 +166,7 @@ function buildTier3Queries({ domainSkills, titleVariants, locations, exclusions,
       roles:      titleVariants.slice(0, 2),
       skills:     [domain],
       locations,
-      keywords:   [domain, stageWord, ...titleVariants.slice(0, 1)],
+      keywords:   [...new Set(keywords)],
       exclusions,
       priority:   'medium',
       freshness,

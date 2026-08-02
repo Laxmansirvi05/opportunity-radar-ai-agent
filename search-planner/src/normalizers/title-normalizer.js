@@ -54,12 +54,14 @@ const TITLE_ALIASES = new Map([
 ]);
 
 // Career-stage sets for expansion decisions.
-const INTERN_STAGES      = new Set(['student']);           // → 'Intern' / 'Internship' suffixes
-const ENTRY_LEVEL_STAGES = new Set(['early-career']);      // → 'Junior' / 'Entry Level' prefixes
+const INTERN_STAGES      = new Set(['student']);                         // → 'Intern' / 'Internship' suffixes
+const ENTRY_LEVEL_STAGES = new Set(['early-career']);                    // → 'Junior' / 'Entry Level' prefixes
+const SENIOR_STAGES      = new Set(['senior', 'staff', 'principal']);    // → 'Senior X' / 'Staff X' variants
 
-// Suffixes to try when generating Tier 1 search queries.
-const INTERN_SUFFIXES = ['Intern', 'Internship'];
-const ENTRY_SUFFIXES = ['', 'Junior', 'Entry Level', 'New Grad'];
+// Suffixes/prefixes to try when generating Tier 1 search queries.
+const INTERN_SUFFIXES  = ['Intern', 'Internship'];
+const ENTRY_SUFFIXES   = ['', 'Junior', 'Entry Level', 'New Grad'];
+const SENIOR_PREFIXES  = ['Senior', 'Staff', 'Principal', ''];           // '' = bare title
 
 // Qualifiers that indicate seniority beyond a student/early-career candidate.
 const SENIOR_QUALIFIERS = /\b(senior|sr\.|staff|principal|lead|director|vp|head of|manager|architect)\b/i;
@@ -84,8 +86,13 @@ function normalizeTitle(raw) {
  * @param {string[]} rawTitles
  * @returns {string[]}
  */
-function normalizeTitles(rawTitles) {
+function normalizeTitles(rawTitles, careerStage) {
   if (!Array.isArray(rawTitles)) return [];
+
+  const stage = (careerStage || '').toLowerCase();
+  // Only strip seniority qualifiers when the candidate is student/early-career.
+  // Senior candidates' own job titles (e.g. "Senior AI Systems Architect") must be preserved.
+  const stripSeniorQualifiers = (stage === 'student' || stage === 'early-career');
 
   const seen = new Set();
   const result = [];
@@ -93,7 +100,7 @@ function normalizeTitles(rawTitles) {
   for (const raw of rawTitles) {
     const normalized = normalizeTitle(raw);
     if (!normalized) continue;
-    if (SENIOR_QUALIFIERS.test(normalized)) continue;
+    if (stripSeniorQualifiers && SENIOR_QUALIFIERS.test(normalized)) continue;
 
     const key = normalized.toLowerCase();
     if (!seen.has(key)) {
@@ -122,13 +129,24 @@ function expandTitleForStage(title, careerStage) {
   const stage = (careerStage || '').toLowerCase();
   const result = new Set();
 
+
   if (INTERN_STAGES.has(stage)) {
+    // student → intern/internship suffixes
     for (const suffix of INTERN_SUFFIXES) {
       result.add(`${title} ${suffix}`);
     }
-  } else {
+  } else if (ENTRY_LEVEL_STAGES.has(stage)) {
+    // early-career → Junior / Entry Level / New Grad prefixes
     for (const suffix of ENTRY_SUFFIXES) {
       result.add(suffix ? `${suffix} ${title}` : title);
+    }
+  } else {
+    // senior / staff / principal / mid-career / unknown → seniority-appropriate prefixes.
+    // Strip any existing leading qualifier from the base title so we don't produce
+    // "Senior Senior AI Systems Architect" when the resume title already contains "Senior".
+    const baseTitle = title.replace(/^(senior|sr\.|staff|principal|lead)\s+/i, '').trim();
+    for (const prefix of SENIOR_PREFIXES) {
+      result.add(prefix ? `${prefix} ${baseTitle}` : baseTitle);
     }
   }
 

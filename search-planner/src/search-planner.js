@@ -91,8 +91,8 @@ function extractCipComponents(cip) {
     ...(careerDirection.adjacent || []),
   ].filter(Boolean);
 
-  // Normalize all roles.
-  const allRoles      = normalizeTitles([...rawRoles, ...adjacentRoles]);
+  // Normalize all roles — pass careerStage so senior titles are preserved for senior candidates.
+  const allRoles      = normalizeTitles([...rawRoles, ...adjacentRoles], careerStage);
   const titleVariants = allRoles.length > 0
     ? expandTitleForStage(allRoles[0], careerStage)
     : expandTitleForStage('Software Engineer', careerStage); // safe default
