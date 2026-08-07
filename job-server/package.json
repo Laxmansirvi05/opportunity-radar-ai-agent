@@ -1,0 +1,17 @@
+{
+  "name": "job-server",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "engines": { "node": ">=18.17.0" },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js",
+    "check": "node --check src/*.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "pg": "^8.13.1"
+  }
+}

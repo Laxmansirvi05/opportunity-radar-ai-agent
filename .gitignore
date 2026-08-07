@@ -41,3 +41,4 @@ test_sh_output.txt
 fixtures/
 live-runs/
 test-resumes/
+job-server/node_modules/
