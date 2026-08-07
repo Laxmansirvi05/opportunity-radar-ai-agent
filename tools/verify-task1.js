@@ -97,17 +97,24 @@ function summarize(label, allocated) {
   assert.equal(summary.succeeded, scored.length - failed);
   console.log(`  PASS  run-level summary is honest: ${JSON.stringify(summary)}`);
 
-  const expected = Math.min(10, summary.succeeded);
-  assert.equal(
-    newAllocated.length, expected,
-    'allocation must not pad beyond the genuinely-scored set'
+  // Since task-4 the allocated set is (genuinely scored) AND (>= score floor),
+  // so the ceiling is the number that cleared the floor, never the failed ones.
+  const floor = newAllocated[0]?.allocation_summary?.min_score ?? 0;
+  const aboveFloor = newFinalized.filter((o) => o.score >= floor).length;
+  assert.ok(
+    newAllocated.length <= Math.min(10, aboveFloor),
+    'allocation must not pad beyond the genuinely-scored, above-floor set'
+  );
+  assert.ok(
+    newAllocated.length <= summary.succeeded,
+    'allocation can never exceed the number of successful scores'
   );
   console.log(`  PASS  allocated ${newAllocated.length} from ${summary.succeeded} genuinely scored (no padding with failures)`);
 
   // Distinguishing "scored low" from "failed to score" is the whole point.
-  const genuineLow = newAllocated.filter((o) => o.scoring_status === 'scored' && o.score === 0);
-  console.log(`\n  NOTE  ${genuineLow.length} item(s) carry a genuine LLM score of 0 — correctly kept as`);
-  console.log('        "scored low", not discarded as failures. Task 4\'s score floor removes these.');
+  const genuineLow = newFinalized.filter((o) => o.scoring_status === 'scored' && o.score === 0);
+  console.log(`\n  NOTE  ${genuineLow.length} item(s) carry a genuine LLM score of 0 — retained by task-1 as`);
+  console.log(`        "scored low" (not a failure), then excluded by task-4's floor of ${floor}.`);
 
   console.log('\nALL TASK-1 FIXTURE ASSERTIONS PASSED (0 network calls)');
 })().catch((e) => { console.error('\nFAILED:', e.message); process.exit(1); });

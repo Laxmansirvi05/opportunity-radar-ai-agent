@@ -526,6 +526,19 @@
         ],
         "id": "e45893a7-e123-4567-89ab-cdef01234567",
         "name": "Geographic Allocator"
+      },
+      {
+        "parameters": {
+          "jsCode": "// ============================================================\n// BUILD RESPONSE\n// ============================================================\n// Produces the final service response and decides between the normal path\n// and the weak-resume path.\n//\n// Gap feedback is aggregated ONLY over successfully-scored opportunities.\n// If half the scoring failed to rate limits, aggregating across the whole\n// set would tell a strong candidate their resume is weak because a provider\n// throttled us \u2014 false, discouraging feedback that is worse than none.\n// ============================================================\n\nconst MIN_USEFUL_COUNT = 5;\n\n// A gap must appear in at least this many postings to be reported. One\n// mention is noise, not a pattern.\nconst MIN_GAP_FREQUENCY = 2;\n\n// The scoring model sometimes reports missing SCHEMA FIELDS rather than\n// missing candidate skills (\"job description\", \"location\", \"workplace type\").\n// Those describe a thin posting, not a gap in the resume, and must never be\n// shown to a student as something they lack.\nconst SCHEMA_ARTIFACT_TERMS = new Set([\n  'job description', 'description', 'required skills', 'requirements',\n  'location', 'workplace type', 'employment type', 'employment type details',\n  'salary', 'compensation', 'deadline', 'company', 'title', 'none',\n  'not specified', 'n/a', 'unknown', 'experience', 'qualifications'\n]);\n\nconst allocatorItems = $input.all().map(i => i.json);\n\n// The allocator emits an explicit empty carrier when nothing qualified.\nconst isEmptyCarrier =\n  allocatorItems.length === 1 && Array.isArray(allocatorItems[0].opportunities);\n\nconst opportunities = isEmptyCarrier ? [] : allocatorItems;\n\nconst allocationSummary =\n  (isEmptyCarrier ? allocatorItems[0].allocation_summary : opportunities[0]?.allocation_summary) || {};\n\nconst scoringSummary = allocationSummary.scoring || null;\n\n// Successfully-scored pool, for gap aggregation.\nlet scoredPool = [];\ntry {\n  scoredPool = $('Finalize Results').all()\n    .map(i => i.json)\n    .filter(o => o && o.scoring_status === 'scored');\n} catch (e) {\n  scoredPool = [];\n}\n\nfunction canonicalGap(raw) {\n  let g = String(raw || '').trim().toLowerCase();\n  if (!g) return null;\n  // Drop parenthetical examples: \"ml frameworks (e.g. pytorch)\" -> \"ml frameworks\"\n  g = g.replace(/\\s*\\((?:e\\.?g\\.?|i\\.?e\\.?)[^)]*\\)/g, '').trim();\n  g = g.replace(/\\s+/g, ' ').replace(/[.,;:]+$/, '').trim();\n  if (!g || g.length < 2 || g.length > 60) return null;\n  if (SCHEMA_ARTIFACT_TERMS.has(g)) return null;\n  return g;\n}\n\nfunction aggregateGaps(pool) {\n  const counts = new Map();\n  let contributing = 0;\n\n  for (const opp of pool) {\n    const reqs = Array.isArray(opp.missing_requirements) ? opp.missing_requirements : [];\n    if (reqs.length === 0) continue;\n    contributing += 1;\n    // Count each gap at most once per posting.\n    const seen = new Set();\n    for (const raw of reqs) {\n      const g = canonicalGap(raw);\n      if (!g || seen.has(g)) continue;\n      seen.add(g);\n      counts.set(g, (counts.get(g) || 0) + 1);\n    }\n  }\n\n  const gaps = [...counts.entries()]\n    .filter(([, n]) => n >= MIN_GAP_FREQUENCY)\n    .sort((a, b) => b[1] - a[1])\n    .map(([skill, n]) => ({\n      skill,\n      postings_requiring: n,\n      of_postings_analyzed: contributing,\n      message: `${n} of ${contributing} relevant roles wanted ${skill}, which your resume doesn't show.`\n    }));\n\n  return { gaps, postings_analyzed: contributing };\n}\n\nconst { gaps, postings_analyzed } = aggregateGaps(scoredPool);\n\nconst sufficient = opportunities.length >= MIN_USEFUL_COUNT;\n\n// Honest diagnosis of WHY the list is short \u2014 \"only 4 good matches exist\" and\n// \"9 existed but 5 failed to score\" are completely different situations.\nconst reasons = [];\nif (!sufficient) {\n  if (scoringSummary && scoringSummary.failed > 0) {\n    reasons.push(\n      `${scoringSummary.failed} of ${scoringSummary.attempted} opportunities could not be scored ` +\n      `(provider errors), so they were excluded rather than guessed at.`\n    );\n  }\n  if (allocationSummary.below_score_floor > 0) {\n    reasons.push(\n      `${allocationSummary.below_score_floor} scored below the minimum fit threshold ` +\n      `of ${allocationSummary.min_score} and were not padded into the results.`\n    );\n  }\n  if (reasons.length === 0) {\n    reasons.push('Too few relevant open postings were discovered for this profile.');\n  }\n}\n\nconst response = {\n  status: sufficient ? 'ok' : 'weak_profile',\n  opportunity_count: opportunities.length,\n  opportunities,\n  scoring: scoringSummary,\n  allocation: allocationSummary,\n};\n\nif (!sufficient) {\n  response.weak_profile = {\n    // Whatever genuinely qualified is still returned \u2014 never an empty list\n    // when real matches exist.\n    returned: opportunities.length,\n    minimum_expected: MIN_USEFUL_COUNT,\n    reasons,\n    gaps,\n    gaps_note: gaps.length === 0\n      ? (postings_analyzed === 0\n          ? 'No successfully-scored postings were available to derive gaps from.'\n          : `No skill gap appeared in at least ${MIN_GAP_FREQUENCY} of the ${postings_analyzed} scored postings, so none is reported as a pattern.`)\n      : `Derived from ${postings_analyzed} successfully-scored postings.`\n  };\n}\n\nreturn [{ json: response }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1870,
+          -448
+        ],
+        "id": "b1d3f0ce-7a21-4f55-9c30-weakresume01",
+        "name": "Build Response"
       }
     ],
     "connections": {
@@ -797,6 +810,17 @@
           [
             {
               "node": "Geographic Allocator",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Geographic Allocator": {
+        "main": [
+          [
+            {
+              "node": "Build Response",
               "type": "main",
               "index": 0
             }
