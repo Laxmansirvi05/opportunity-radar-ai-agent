@@ -57,7 +57,7 @@ function createApp({ gateway, taskService, logger }) {
     if (credentialsMatch(req.get("x-api-key"), gateway.config.gatewayApiKey)) return next();
     return next(new GatewayError("UNAUTHORIZED", "Unauthorized", { status: 401 }));
   });
-  app.use(express.json({ limit: "64kb" }));
+  app.use(express.json({ limit: "10mb" }));
 
   app.post("/api/ai/chat", async (req, res, next) => {
     const controller = new AbortController();

@@ -18,10 +18,10 @@ function required(name, value) {
 
 function loadConfig(env) {
   const providerTimeoutMs = integer("PROVIDER_TIMEOUT_MS", env.PROVIDER_TIMEOUT_MS, {
-    min: 1_000, max: 120_000, fallback: 25_000
+    min: 1_000, max: 120_000, fallback: 60_000
   });
   const globalTimeoutMs = integer("GLOBAL_TIMEOUT_MS", env.GLOBAL_TIMEOUT_MS, {
-    min: providerTimeoutMs, max: 180_000, fallback: 75_000
+    min: providerTimeoutMs, max: 180_000, fallback: 120_000
   });
 
   return Object.freeze({
@@ -37,7 +37,7 @@ function loadConfig(env) {
       }),
       openrouter: Object.freeze({
         apiKey: required("OPENROUTER_API_KEY", env.OPENROUTER_API_KEY),
-        model: env.OPENROUTER_MODEL || "google/gemini-2.5-flash"
+        model: env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free"
       }),
       groq: Object.freeze({
         apiKey: required("GROQ_API_KEY", env.GROQ_API_KEY),

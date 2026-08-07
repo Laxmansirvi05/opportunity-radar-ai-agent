@@ -16,6 +16,7 @@ const FIELDS = [
 ];
 
 function invalid(message) {
+  console.error(`Validation Failed: ${message}`);
   throw new GatewayError("TASK_OUTPUT_INVALID", message, { status: 502 });
 }
 
@@ -53,6 +54,23 @@ function nullableDate(value) {
   return date;
 }
 
+function validateLocation(value) {
+  if (value === null) return null;
+  if (typeof value !== "object" || Array.isArray(value)) invalid("location must be an object or null");
+  
+  const keys = Object.keys(value);
+  const expected = ["city", "state", "country"];
+  if (keys.some((key) => !expected.includes(key)) || expected.some((field) => !(field in value))) {
+    invalid("location must contain exactly city, state, country keys");
+  }
+  
+  return Object.freeze({
+    city: nullableString(value.city, "location.city"),
+    state: nullableString(value.state, "location.state"),
+    country: nullableString(value.country, "location.country")
+  });
+}
+
 function validateOpportunity(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) invalid("Opportunity output must be a JSON object");
   const keys = Object.keys(value);
@@ -70,7 +88,7 @@ function validateOpportunity(value) {
   return Object.freeze({
     title,
     company,
-    location: nullableString(value.location, "location"),
+    location: validateLocation(value.location),
     workplaceType,
     employmentType,
     description: nullableString(value.description, "description"),

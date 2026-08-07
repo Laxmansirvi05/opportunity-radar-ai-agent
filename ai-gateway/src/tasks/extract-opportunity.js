@@ -5,6 +5,7 @@ const SYSTEM_PROMPT = `You extract one internship or job opportunity from suppli
 Return exactly one JSON object and nothing else. Do not use Markdown, code fences, commentary, or prose.
 The object must contain exactly these fields: ${FIELDS.join(", ")}.
 Use null when a scalar value is unavailable. Use [] when requirements or skills are unavailable.
+For location, output an object with city, state, country. If not explicitly stated, infer the location from the company's headquarters or contextual clues in the job description.
 workplaceType must be one of: remote, hybrid, onsite, unknown.
 employmentType must be one of: internship, full-time, part-time, contract, temporary, unknown.
 deadline must be YYYY-MM-DD or null. applicationUrl must be an http(s) URL or null.`;
@@ -21,6 +22,7 @@ function parseAndValidate(text) {
   try {
     parsed = JSON.parse(text);
   } catch (cause) {
+    console.error(`JSON Parse Failed: ${cause.message}\nRaw Output: ${text}`);
     throw new GatewayError("TASK_OUTPUT_INVALID", "Task returned invalid JSON", { status: 502, cause });
   }
   return validateOpportunity(parsed);
@@ -32,7 +34,8 @@ function createModelInput(input) {
     systemPrompt: SYSTEM_PROMPT,
     temperature: 0,
     maxTokens: 2_000,
-    responseFormat: "json"
+    responseFormat: "json",
+    timeoutMs: 30000
   });
 }
 
@@ -42,7 +45,8 @@ function createRepairInput(input, invalidOutput) {
     systemPrompt: SYSTEM_PROMPT,
     temperature: 0,
     maxTokens: 2_000,
-    responseFormat: "json"
+    responseFormat: "json",
+    timeoutMs: 30000
   });
 }
 

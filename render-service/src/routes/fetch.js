@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const dns = require('node:dns').promises;
 const config = require('../config');
 const logger = require('../logger');
 const requestQueue = require('../requestQueue');
@@ -65,6 +66,36 @@ function validateUrl(rawUrl) {
 }
 
 /**
+ * Resolves every A/AAAA record for a hostname and rejects the request if ANY
+ * resolved address is loopback / private / link-local / reserved. This closes
+ * the DNS-rebinding and TOCTOU gap left by isPrivateOrReservedHost() (which
+ * only inspects the literal hostname). The browser connects to one of these
+ * resolved IPs, so blocking on the resolved set — checked synchronously right
+ * before enqueueing the render — prevents using this service as an SSRF pivot
+ * even when the public hostname later resolves to an internal address.
+ *
+ * Note: this is a best-effort pre-check, not a per-connection pin. A
+ * sufficiently fast rebinding attack between this check and the browser's
+ * connect could still slip through; for full protection, route the browser's
+ * traffic through a proxy that re-validates the resolved IP at connect time.
+ */
+async function assertNoPrivateResolution(hostname) {
+  let addresses = [];
+  try {
+    addresses = await dns.lookup(hostname, { all: true });
+  } catch {
+    // Resolution failure is handled downstream by the browser navigation.
+    return;
+  }
+
+  for (const { address } of addresses) {
+    if (isPrivateOrReservedHost(address)) {
+      throw new ValidationError(`URL host resolves to a blocked address: ${address}`);
+    }
+  }
+}
+
+/**
  * Wraps queued rendering with an overall wall-clock budget. If it fires:
  *   - any in-flight browser context is force-closed (aborting navigation)
  *   - a cancellation token stops any further retry attempts from starting
@@ -110,6 +141,11 @@ router.post('/fetch', async (req, res, next) => {
   try {
     const url = validateUrl(req.body && req.body.url);
     logger.info('Fetch request received', { url });
+
+    // SSRF defense-in-depth: block hosts that resolve to internal addresses.
+    if (config.blockPrivateNetworkTargets) {
+      await assertNoPrivateResolution(new URL(url).hostname);
+    }
 
     const result = await renderWithOverallTimeout(url);
     const renderTimeMs = Date.now() - startedAt;

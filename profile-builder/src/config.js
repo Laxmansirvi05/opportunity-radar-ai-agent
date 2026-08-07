@@ -32,7 +32,13 @@ function loadConfig() {
     );
   }
 
-  return Object.freeze({ gatewayBaseUrl, gatewayApiKey });
+  // Optional API key for THIS service's own HTTP endpoints. When set, the
+  // /profile/build route requires a matching x-api-key header (constant-time
+  // compare). Left unset → endpoints are open (assumes a trusted network only,
+  // e.g. this service and its caller share a private Docker network).
+  const profileApiKey = process.env.PROFILE_BUILDER_API_KEY || null;
+
+  return Object.freeze({ gatewayBaseUrl, gatewayApiKey, profileApiKey });
 }
 
 module.exports = { loadConfig };

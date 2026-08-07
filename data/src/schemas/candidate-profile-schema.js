@@ -28,7 +28,7 @@ const SCHEMA_VERSION = '2.0.0';
 // ---------------------------------------------------------------------------
 
 const CAREER_STAGES = Object.freeze(
-  new Set(['student', 'early-career', 'mid-career', 'senior', 'transitioning'])
+  new Set(['student', 'early-career', 'mid-career', 'senior', 'transitioning', 'unknown'])
 );
 
 const SKILL_CATEGORIES = Object.freeze(
@@ -122,23 +122,31 @@ function evidenceArray(value, field) {
   return Object.freeze(value.map((item) => item.trim()));
 }
 
-/**
- * Validates the standard shape of an inferred field:
- *   { value: T, confidence: number, evidence: string[] }
- *
- * @param {unknown}          raw          - The raw field value from AI output.
- * @param {string}           field        - Field path for error messages.
- * @param {(v: unknown) => T} valueValidator - Validates the `.value` property.
- * @returns {{ value: T, confidence: number, evidence: string[] }}
- */
 function inferredField(raw, field, valueValidator) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     invalid(`${field} must be an object with value, confidence, and evidence`);
   }
+  
+  const validatedValue = valueValidator(raw.value, `${field}.value`);
+  const isUnknown = (validatedValue === 'unknown' || validatedValue === null);
+
+  let validatedEvidence;
+  if (isUnknown) {
+    if (!Array.isArray(raw.evidence)) {
+      invalid(`${field}.evidence must be an array`);
+    }
+    if (raw.evidence.some((item) => typeof item !== 'string' || item.trim() === '')) {
+      invalid(`${field}.evidence must contain only non-empty strings`);
+    }
+    validatedEvidence = Object.freeze(raw.evidence.map((item) => item.trim()));
+  } else {
+    validatedEvidence = evidenceArray(raw.evidence, field);
+  }
+
   return Object.freeze({
-    value:      valueValidator(raw.value, `${field}.value`),
+    value:      validatedValue,
     confidence: confidence(raw.confidence, field),
-    evidence:   evidenceArray(raw.evidence, field),
+    evidence:   validatedEvidence,
   });
 }
 
@@ -261,11 +269,27 @@ function validateCareerDirection(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     invalid('"inferred.careerDirection" must be an object');
   }
+  const primary = nullableString(raw.primary, 'inferred.careerDirection.primary');
+  const isUnknown = (primary === null || primary.toLowerCase() === 'unknown');
+
+  let valEvidence;
+  if (isUnknown) {
+    if (!Array.isArray(raw.evidence)) {
+      invalid('inferred.careerDirection.evidence must be an array');
+    }
+    if (raw.evidence.some((item) => typeof item !== 'string' || item.trim() === '')) {
+      invalid('inferred.careerDirection.evidence must contain only non-empty strings');
+    }
+    valEvidence = Object.freeze(raw.evidence.map((item) => item.trim()));
+  } else {
+    valEvidence = evidenceArray(raw.evidence, 'inferred.careerDirection');
+  }
+
   return Object.freeze({
-    primary:    nonEmptyString(raw.primary,           'inferred.careerDirection.primary'),
+    primary:    primary || 'unknown',
     adjacent:   optionalStringArray(raw.adjacent ?? [], 'inferred.careerDirection.adjacent'),
     confidence: confidence(raw.confidence,             'inferred.careerDirection'),
-    evidence:   evidenceArray(raw.evidence,            'inferred.careerDirection'),
+    evidence:   valEvidence,
   });
 }
 

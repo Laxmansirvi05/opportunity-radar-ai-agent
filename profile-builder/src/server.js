@@ -1,13 +1,62 @@
 'use strict';
 
+const crypto = require('node:crypto');
 const express = require('express');
 const { buildProfile, ProfileBuildError } = require('./index');
+const { loadConfig } = require('./config');
 
 const app = express();
 const PORT = process.env.PORT || 4100;
 
 // Middleware to parse JSON bodies.
 app.use(express.json({ limit: '1mb' }));
+
+// Constant-time key comparison (no timing oracle for brute-forcing the key).
+function safeCompare(a, b) {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) {
+    crypto.timingSafeEqual(bufA, bufA); // equal-length dummy compare, no leak
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+// Structured (JSON) unhandled-error log, matching the rest of the system.
+function logError(err) {
+  process.stdout.write(
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      service: 'profile-builder',
+      event: 'unhandled_server_error',
+      message: err && err.message,
+    }) + '\n'
+  );
+}
+
+// Optional API-key gate for this service's endpoints. Enabled only when
+// PROFILE_BUILDER_API_KEY is set; the /health route stays open regardless.
+let profileApiKey = null;
+try { profileApiKey = loadConfig().profileApiKey; } catch { /* gateway key missing; auth simply disabled */ }
+if (profileApiKey) {
+  app.use((req, res, next) => {
+    const provided = req.get('x-api-key') || '';
+    if (!provided || !safeCompare(provided, profileApiKey)) {
+      return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or missing API key' } });
+    }
+    next();
+  });
+}
+
+// Catch JSON parsing errors to prevent stack trace leaks
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      error: { code: 'INVALID_JSON', message: 'Request body is not valid JSON' }
+    });
+  }
+  next(err);
+});
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
@@ -34,7 +83,7 @@ app.post('/profile/build', async (req, res) => {
         }
       });
     } else {
-      console.error('Unhandled server error:', error);
+      logError(error);
       res.status(500).json({
         error: {
           code: 'INTERNAL_SERVER_ERROR',

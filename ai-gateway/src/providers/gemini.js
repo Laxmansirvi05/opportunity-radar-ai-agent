@@ -13,7 +13,7 @@ class GeminiProvider extends BaseProvider {
           ...(input.responseFormat === "json" ? { responseMimeType: "application/json" } : {})
         }
       },
-      { headers: { "x-goog-api-key": this.apiKey }, signal }
+      { headers: { "x-goog-api-key": this.apiKey }, signal, timeoutMs: input.timeoutMs }
     );
     return this.extractText(data?.candidates?.[0]?.content?.parts?.map((part) => part.text).join(""));
   }

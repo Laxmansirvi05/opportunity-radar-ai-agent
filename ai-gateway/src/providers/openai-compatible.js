@@ -19,7 +19,8 @@ class OpenAiCompatibleProvider extends BaseProvider {
       ...(input.responseFormat === "json" ? { response_format: { type: "json_object" } } : {})
     }, {
       headers: { authorization: `Bearer ${this.apiKey}` },
-      signal
+      signal,
+      timeoutMs: input.timeoutMs
     });
     return this.extractText(data?.choices?.[0]?.message?.content);
   }

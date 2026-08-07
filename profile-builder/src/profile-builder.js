@@ -104,8 +104,30 @@ function normaliseInput(rawResume) {
  * @param {Object} resumeObj
  * @returns {string} 64-character hex string.
  */
+/**
+ * Recursively produce a stable, key-order-independent JSON string.
+ * Unlike JSON.stringify(obj, Object.keys(obj).sort()) — which only sorts the
+ * TOP-LEVEL keys — this sorts keys at every nesting level, so two résumés
+ * that are byte-identical except for nested-object key order produce the same
+ * canonical string (and therefore the same dedup hash).
+ *
+ * @param {*} value
+ * @returns {string}
+ */
+function canonicalize(value) {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalize).join(',')}]`;
+  }
+  const sortedKeys = Object.keys(value).sort();
+  const entries = sortedKeys.map((k) => `${JSON.stringify(k)}:${canonicalize(value[k])}`);
+  return `{${entries.join(',')}}`;
+}
+
 function computeResumeHash(resumeObj) {
-  const canonical = JSON.stringify(resumeObj, Object.keys(resumeObj).sort());
+  const canonical = canonicalize(resumeObj);
   return createHash('sha256').update(canonical, 'utf8').digest('hex');
 }
 

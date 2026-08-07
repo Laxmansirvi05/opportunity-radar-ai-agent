@@ -1,7 +1,8 @@
 const extractOpportunity = require("./extract-opportunity");
 const buildProfile = require("./build-profile");
+const scoreFit = require("./score-fit");
 
-function createTaskRegistry(tasks = [extractOpportunity, buildProfile]) {
+function createTaskRegistry(tasks = [extractOpportunity, buildProfile, scoreFit]) {
   const registry = new Map(tasks.map((task) => [task.name, task]));
   return Object.freeze({
     get(name) {

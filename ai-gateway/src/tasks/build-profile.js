@@ -152,13 +152,11 @@ function validateInput(value) {
  * @returns {Readonly<CIP>} - Frozen, validated CIP object.
  */
 function parseAndValidate(text) {
-  console.error('RAW OUTPUT FROM AI:', text);
   let parsed;
   try {
     const cleanedText = text.replace(/^```(json)?|```$/gm, '').trim();
     parsed = JSON.parse(cleanedText);
   } catch (cause) {
-    console.error('JSON PARSE ERROR:', cause.message);
     throw new GatewayError('TASK_OUTPUT_INVALID', 'build_profile: model returned invalid JSON', {
       status: 502,
       cause,
@@ -169,7 +167,6 @@ function parseAndValidate(text) {
     return validateCandidateProfile(parsed);
   } catch (cause) {
     if (cause instanceof ProfileValidationError) {
-      console.error('Validation Error Details:', cause.message, JSON.stringify(parsed, null, 2));
       throw new GatewayError('TASK_OUTPUT_INVALID', `build_profile: ${cause.message}`, {
         status: 502,
         cause,
@@ -207,8 +204,14 @@ function createModelInput(serializedResume) {
  * @returns {Readonly<ModelInput>}
  */
 function createRepairInput(serializedResume, invalidOutput) {
+  const MAX_REPAIR_OUTPUT_CHARS = 2000;
+  let truncatedOutput = invalidOutput;
+  if (truncatedOutput.length > MAX_REPAIR_OUTPUT_CHARS) {
+    truncatedOutput = truncatedOutput.slice(0, MAX_REPAIR_OUTPUT_CHARS) + "\n...[truncated]";
+  }
+
   return Object.freeze({
-    prompt: `Source resume JSON:\n${serializedResume}\n\nPrevious invalid output:\n${invalidOutput}\n\nReturn the corrected CIP JSON object only. Ensure all required sections (literal, inferred, meta) are present and all inferred fields include confidence and evidence.`,
+    prompt: `Source resume JSON:\n${serializedResume}\n\nPrevious invalid output:\n${truncatedOutput}\n\nReturn the corrected CIP JSON object only. Ensure all required sections (literal, inferred, meta) are present and all inferred fields include confidence and evidence.\n\nCRITICAL: If the resume contains insufficient information to determine search intent, use the exact string "Insufficient information to determine search intent" rather than an empty string.`,
     systemPrompt:   SYSTEM_PROMPT,
     temperature:    0,
     maxTokens:      4_000,

@@ -66,7 +66,7 @@ async function upsertOpportunity({
      RETURNING id,
                (xmax = 0) AS is_new`,
     [
-      sourceUrl, sourceTier, contentHash, title, company, location,
+      sourceUrl, sourceTier, contentHash, title, company, typeof location === 'object' && location !== null ? JSON.stringify(location) : location,
       workplaceType, employmentType, description,
       JSON.stringify(requirements), JSON.stringify(skills),
       applyUrl, deadline || null, compensationRaw || null,
