@@ -194,3 +194,78 @@ Not changed here because n8n needs a working value and rotating it is your call.
    candidate rows to Postgres — smaller, reversible, no Data Plane coupling.
 4. **Adapter over straight swap** for Task 3 (above).
 5. **Untracked `node_modules` + run artifacts** without rewriting history.
+
+---
+
+# Completion Run — reordered for quota conservation
+
+Phases done tonight: **4** (contract), **5** (job server), **2 staged only**.
+Deferred at the user's instruction until quota resets: **2** (verification),
+**3** (broaden-and-retry), **6** (5-resume generalization).
+
+Live pipeline runs this session: **5** (4 in Phase 1, 1 end-to-end job-server run).
+
+## Phase 4 — contract locked
+
+`API_CONTRACT.md` written with a real example from live run `runD-final`,
+replayed through the response shaper. No new API calls, no synthetic data.
+
+**F6 resolved.** `tier` is strictly geographic; widening moved to
+`allocation_reason` (`quota` | `widened`). `"backfilled"` is never emitted.
+
+**Product rule 5 enforced — the biggest finding of the project.** Measured
+across four captured runs: of 10 reported opportunities, 4–5 had no apply URL
+at all and 2–4 were aggregator/search/listing pages. Only 0–3 per run were
+usable. The allocator now excludes both classes and reports
+`excluded_no_apply_url` / `excluded_aggregator_page`.
+
+| Run | before | after |
+|---|---|---|
+| runD-final | 10 | 4 |
+| p1-student1-verify | 10 | 4 |
+| p1-student2 | 4 | 1 |
+| p1-student1-batch1 | 5 | 1 |
+| p1-student3-noncs | — | 1 |
+
+Every run is now `weak_profile`. **The service does not currently meet the
+5-minimum.** That is the true state, and it makes Phase 3 the critical piece.
+
+## Phase 5 — job server
+
+Built and verified against a stubbed pipeline (zero API calls): 15/15 tests
+covering upload, polling, oversized file, wrong type named `.pdf`, missing
+file, unknown and malformed `job_id`, two concurrent submissions (observed max
+concurrency 1), pipeline crash → `PIPELINE_FAILED`, stuck job →
+`PIPELINE_TIMEOUT`, interval sweep, CORS off by default.
+
+Postgres repository verified against the real database, including the
+SQL-enforced concurrency limit. New migration `013_pipeline_jobs.sql`; no
+applied migration touched.
+
+**Deferred: n8n webhook mode.** The verified path is the one-shot CLI runner.
+Switching how the whole system boots is the likeliest thing to need reverting
+and needs its own live verification.
+
+## Phase 2 — staged, UNVERIFIED
+
+`score_fit`'s gap prompt rewritten at the source: candidate-side framing, an
+explicit FORBIDDEN list naming every artifact observed in real output, four
+worked examples including two where an empty array is correct.
+
+7 offline tests pin the prompt contract. They do **not** prove a model obeys
+it. `tools/verify-gap-quality.js` is the acceptance harness — written, not run,
+thresholds stated up front.
+
+## Decisions made
+
+1. **Enforced product rule 5 even though it drops counts to 1–4.** Returning
+   listing pages and URL-less rows as "opportunities" is fabrication; a lower
+   honest count is the product rule. Alternative (report 10 including junk)
+   rejected.
+2. **Cleaned the response shape before locking it.** The raw item carried
+   duplicate field spellings and per-row run bookkeeping. Locking that would
+   have enshrined a mess. Verified offline against five captured runs.
+3. **Kept the CLI pipeline runner, deferred webhook mode.** Reversible over
+   clever; webhook mode is unverifiable within tonight's budget.
+4. **Moved `test-extract.js` out of the test glob rather than deleting it.** It
+   was a scratch script making live API calls on every `npm test`.
