@@ -105,6 +105,11 @@ test('stripStageQualifiers: removes leading and trailing stage words', () => {
   assert.equal(stripStageQualifiers('Data Scientist'), 'Data Scientist');
   // A title made only of qualifiers keeps its original form rather than emptying
   assert.equal(stripStageQualifiers('Intern'), 'Intern');
+  // Parenthetical qualifiers are dropped — observed live, an experience title of
+  // "Frontend Developer (Part-time)" was producing the search role
+  // "Frontend Developer (Part-time) Intern", which matches far fewer postings.
+  assert.equal(stripStageQualifiers('Frontend Developer (Part-time)'), 'Frontend Developer');
+  assert.equal(stripStageQualifiers('Data Analyst (Remote) Intern'), 'Data Analyst');
 });
 
 test('expandTitleForStage: does not double a stage qualifier already in the title', () => {

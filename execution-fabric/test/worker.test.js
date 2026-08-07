@@ -29,7 +29,7 @@ function makeDeps(overrides = {}) {
             {
               title: 'Software Engineer',
               company: 'Acme',
-              location: 'Remote',
+              location: { city: 'Remote', state: null, country: null },
               workplaceType: 'remote',
               employmentType: 'full-time',
               description: '...',

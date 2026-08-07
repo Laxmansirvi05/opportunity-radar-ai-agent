@@ -88,10 +88,14 @@ test('exports the correct SCHEMA_VERSION', () => {
 });
 
 test('exports the correct career stage enum values', () => {
-  for (const stage of ['student', 'early-career', 'mid-career', 'senior', 'transitioning']) {
+  // 'unknown' was added deliberately and has dedicated handling in the schema
+  // (inferredField relaxes the evidence requirement when the value is unknown
+  // or null), so a candidate whose stage cannot be determined stays valid.
+  // This expectation still asserted the pre-'unknown' set of 5.
+  for (const stage of ['student', 'early-career', 'mid-career', 'senior', 'transitioning', 'unknown']) {
     assert.ok(CAREER_STAGES.has(stage), `CAREER_STAGES should include "${stage}"`);
   }
-  assert.equal(CAREER_STAGES.size, 5);
+  assert.equal(CAREER_STAGES.size, 6);
 });
 
 test('exports the correct skill category enum values', () => {

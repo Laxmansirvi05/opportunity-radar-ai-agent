@@ -81,6 +81,11 @@ const TRAILING_STAGE_QUALIFIER = /\s+(intern|internship|trainee|co[- ]?op)$/i;
  */
 function stripStageQualifiers(title) {
   let base = typeof title === 'string' ? title.trim() : '';
+  // Drop parenthetical qualifiers such as "(Part-time)" / "(Remote)" / "(Contract)".
+  // Observed live: an experience title of "Frontend Developer (Part-time)" produced
+  // the search role "Frontend Developer (Part-time) Intern", which matches far
+  // fewer real postings than "Frontend Developer Intern".
+  base = base.replace(/\s*\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
   let previous;
   // Loop: titles can stack qualifiers ("Junior Trainee Engineer Intern").
   do {

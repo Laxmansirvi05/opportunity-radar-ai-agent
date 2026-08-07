@@ -20,7 +20,7 @@ const mockRegistry = {
           {
             title: `Mock Job`,
             company: 'Mock Inc',
-            location: 'Remote',
+            location: { city: 'Remote', state: null, country: null },
             workplaceType: 'remote',
             employmentType: 'full-time',
             description: 'Mock desc',

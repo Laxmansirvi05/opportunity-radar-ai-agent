@@ -31,11 +31,31 @@ const { validateOpportunity } = require('../../ai-gateway/src/tasks/opportunity-
  * @param {object} opp  — validated opportunity fields
  * @returns {string} — SHA-256 hex string
  */
+/**
+ * Flatten a location into a stable string for hashing.
+ *
+ * The opportunity schema requires location to be an object with exactly
+ * city/state/country (or null), but this function assumed a plain string and
+ * called .toLowerCase() on it — so it threw a TypeError on every schema-valid
+ * opportunity, violating validate()'s documented "never throws" contract.
+ * The string form is still accepted for legacy callers.
+ *
+ * @param {object|string|null|undefined} location
+ * @returns {string}
+ */
+function normalizeLocationForHash(location) {
+  if (!location) return '';
+  if (typeof location === 'string') return location.toLowerCase().trim();
+  return [location.city, location.state, location.country]
+    .map((part) => (part == null ? '' : String(part).toLowerCase().trim()))
+    .join(',');
+}
+
 function computeContentHash(opp) {
   const payload = [
     (opp.title        || '').toLowerCase().trim(),
     (opp.company      || '').toLowerCase().trim(),
-    (opp.location     || '').toLowerCase().trim(),
+    normalizeLocationForHash(opp.location),
     (opp.employmentType || '').toLowerCase().trim(),
   ].join('|');
   return crypto.createHash('sha256').update(payload).digest('hex');
