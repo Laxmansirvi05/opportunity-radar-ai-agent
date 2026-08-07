@@ -13,7 +13,7 @@
  * is what the pipeline has actually been verified with.
  */
 
-const { execFile } = require('node:child_process');
+const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -50,7 +50,7 @@ function extractResponse(stdout) {
   throw new Error('Build Response was empty');
 }
 
-function createCliRunner({ repoRoot, timeoutMs = 20 * 60 * 1000, logger = console } = {}) {
+function createCliRunner({ repoRoot, timeoutMs = 15 * 60 * 1000, maxStdoutBytes = 512 * 1024 * 1024, logger = console } = {}) {
   return function runPipeline(job) {
     return new Promise((resolve, reject) => {
       try {
@@ -59,24 +59,77 @@ function createCliRunner({ repoRoot, timeoutMs = 20 * 60 * 1000, logger = consol
         return reject(new Error(`could not stage resume: ${error.message}`));
       }
       logger.info?.('pipeline_start', { jobId: job.id });
-      execFile(
+
+      // spawn, NOT execFile: `npx n8n` spawns a grandchild, and execFile's
+      // timeout signals only its direct child — a hung run left n8n alive for
+      // 31 minutes, past both the timeout and the job sweeper. `detached: true`
+      // is also a spawn-only option (execFile silently ignores it), and it is
+      // what puts the child in its own process GROUP so the whole tree can be
+      // signalled with kill(-pid).
+      const child = spawn(
         'npx',
         ['--yes', 'n8n', 'execute', '--id', WORKFLOW_ID],
-        { cwd: repoRoot, timeout: timeoutMs, maxBuffer: 512 * 1024 * 1024,
-          env: { ...process.env, N8N_BLOCK_ENV_ACCESS_IN_NODE: 'false' } },
-        (error, stdout) => {
-          if (error && error.killed) {
-            const e = new Error('pipeline exceeded its time limit');
-            e.code = 'PIPELINE_TIMEOUT';
-            return reject(e);
-          }
-          try {
-            return resolve(extractResponse(stdout || ''));
-          } catch (parseError) {
-            return reject(parseError);
-          }
+        {
+          cwd: repoRoot,
+          detached: true,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: { ...process.env, N8N_BLOCK_ENV_ACCESS_IN_NODE: 'false' },
         }
       );
+
+      let timedOut = false;
+      let settled = false;
+      const chunks = [];
+      let total = 0;
+
+      const killTree = (signal) => {
+        try { process.kill(-child.pid, signal); }
+        catch { try { child.kill(signal); } catch { /* already gone */ } }
+      };
+
+      const timer = setTimeout(() => {
+        timedOut = true;
+        logger.warn?.('pipeline_timeout_killing_tree', { jobId: job.id, pid: child.pid });
+        killTree('SIGTERM');
+        // Escalate if the group ignores SIGTERM.
+        const hard = setTimeout(() => killTree('SIGKILL'), 5000);
+        hard.unref?.();
+      }, timeoutMs);
+      timer.unref?.();
+
+      child.stdout.on('data', (chunk) => {
+        total += chunk.length;
+        if (total > maxStdoutBytes) {
+          if (!settled) { settled = true; clearTimeout(timer); killTree('SIGKILL'); }
+          return reject(new Error('pipeline produced more output than the buffer allows'));
+        }
+        chunks.push(chunk);
+      });
+      // n8n logs to stderr; drain it so the pipe cannot fill and block the child.
+      child.stderr.on('data', () => {});
+
+      child.on('error', (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(new Error(`could not start n8n: ${error.message}`));
+      });
+
+      child.on('close', () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (timedOut) {
+          const e = new Error('pipeline exceeded its time limit');
+          e.code = 'PIPELINE_TIMEOUT';
+          return reject(e);
+        }
+        try {
+          return resolve(extractResponse(Buffer.concat(chunks).toString('utf8')));
+        } catch (parseError) {
+          return reject(parseError);
+        }
+      });
     });
   };
 }
