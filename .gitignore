@@ -25,5 +25,17 @@ npm-debug.log*
 # Build output
 dist/
 build/
+
+# Pipeline run artifacts — regenerated every run, hundreds of MB combined.
+# Untracked in the F8 hygiene commit; history deliberately NOT rewritten.
 n8n_output.json
+n8n_output.txt
 final_n8n_run.txt
+final_test_output.txt
+pipeline_execution.json
+pipeline_execution_error.log
+raw_output.txt
+test_sh_output.txt
+
+# Replay fixtures captured from real runs
+fixtures/
