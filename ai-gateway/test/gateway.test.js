@@ -104,8 +104,7 @@ test("returns one stable unavailable response after all providers fail", async (
 test("rejects incomplete configuration before startup", () => {
   assert.throws(() => loadConfig({
     GATEWAY_API_KEY: "gateway",
-    GEMINI_API_KEY: "gemini",
-    OPENROUTER_API_KEY: "openrouter"
+    GEMINI_API_KEY: "gemini"
   }), (error) => error.code === "INVALID_CONFIGURATION");
 });
 
@@ -113,12 +112,11 @@ test("loads a complete production configuration", () => {
   const config = loadConfig({
     GATEWAY_API_KEY: "gateway-secret",
     GEMINI_API_KEY: "gemini-secret",
-    OPENROUTER_API_KEY: "openrouter-secret",
     GROQ_API_KEY: "groq-secret"
   });
   assert.equal(config.globalTimeoutMs, 75_000);
   assert.equal(config.providerTimeoutMs, 25_000);
-  assert.equal(config.maxRetries, 1);
+  assert.equal(config.maxRetries, 2);
 });
 
 test("extract_opportunity rejects Markdown and validates only the predefined schema", () => {

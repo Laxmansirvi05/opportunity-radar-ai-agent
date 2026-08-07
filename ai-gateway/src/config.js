@@ -29,19 +29,15 @@ function loadConfig(env) {
     gatewayApiKey: required("GATEWAY_API_KEY", env.GATEWAY_API_KEY),
     globalTimeoutMs,
     providerTimeoutMs,
-    maxRetries: integer("MAX_PROVIDER_RETRIES", env.MAX_PROVIDER_RETRIES, { min: 0, max: 3, fallback: 1 }),
+    maxRetries: integer("MAX_PROVIDER_RETRIES", env.MAX_PROVIDER_RETRIES, { min: 0, max: 3, fallback: 2 }),
     providers: Object.freeze({
-      gemini: Object.freeze({
-        apiKey: required("GEMINI_API_KEY", env.GEMINI_API_KEY),
-        model: env.GEMINI_MODEL || "gemini-2.5-flash"
-      }),
-      openrouter: Object.freeze({
-        apiKey: required("OPENROUTER_API_KEY", env.OPENROUTER_API_KEY),
-        model: env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free"
-      }),
       groq: Object.freeze({
         apiKey: required("GROQ_API_KEY", env.GROQ_API_KEY),
         model: env.GROQ_MODEL || "llama-3.3-70b-versatile"
+      }),
+      gemini: Object.freeze({
+        apiKey: required("GEMINI_API_KEY", env.GEMINI_API_KEY),
+        model: env.GEMINI_MODEL || "gemini-2.5-flash"
       })
     })
   });

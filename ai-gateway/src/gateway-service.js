@@ -55,7 +55,7 @@ class GatewayService {
             retryable: failure.retryable
           });
           if (!failure.retryable || attempt === this.config.maxRetries) break;
-          await wait(100 * (attempt + 1), signal);
+          await wait(300 * 2 ** attempt, signal);
         }
       }
     }
