@@ -31,6 +31,25 @@ Order matters: the pipeline calls the services by name, so they must be
 listening before n8n starts.
 
 ```bash
+# 0. Dependencies — every package has its own node_modules. A fresh clone has
+#    none, and nothing runs until this completes.
+for d in . ai-gateway search-planner render-service profile-builder \
+         execution-fabric data job-server; do
+  (cd "$d" && npm install)
+done
+# render-service's postinstall downloads Chromium (~150 MB, several minutes).
+```
+
+```bash
+# 0b. Configuration — copy the relevant section of .env.example into each
+#     service's own .env, then fill in the [REQUIRED] values.
+cp .env.example .env                    # then edit: GATEWAY_API_KEY, TAVILY_API_KEY,
+                                        #            RESUME_INPUT_PATH
+cp ai-gateway/.env.example ai-gateway/.env   # then edit: the three provider keys
+                                             #  + GATEWAY_API_KEY (must match ./.env)
+```
+
+```bash
 # 1. Infrastructure
 docker compose up -d              # postgres + redis
 ```
@@ -75,7 +94,13 @@ Two files must agree or every LLM call 401s:
 - `ai-gateway/.env` → `GATEWAY_API_KEY` (what the gateway validates)
 - `./.env` → `GATEWAY_API_KEY` (what n8n sends as `$env.GATEWAY_API_KEY`)
 
-The root `./.env` also needs `TAVILY_API_KEY`. n8n reads both directly.
+The root `./.env` also needs:
+
+- `TAVILY_API_KEY` — the search provider
+- `RESUME_INPUT_PATH` — absolute path the workflow reads the resume PDF from.
+  The job server writes each upload here before invoking n8n, so **both must
+  agree**. The job server loads the root `.env` for exactly this reason. Any
+  absolute path works; the directory is created automatically.
 
 `.env` files are gitignored and must stay that way.
 

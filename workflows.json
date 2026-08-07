@@ -21,7 +21,7 @@
       },
       {
         "parameters": {
-          "fileSelector": "/Users/laxmansirvi/.n8n-files/sample-1.pdf",
+          "fileSelector": "={{ $env.RESUME_INPUT_PATH }}",
           "options": {}
         },
         "type": "n8n-nodes-base.readWriteFile",
@@ -31,7 +31,8 @@
           -16
         ],
         "id": "07be5a21-46f2-4943-a9a2-62cd6c8467c6",
-        "name": "Read/Write Files from Disk"
+        "name": "Read/Write Files from Disk",
+        "notes": "Path comes from $env.RESUME_INPUT_PATH (repository-root .env). It was hardcoded to one developer machine, which made the workflow unrunnable anywhere else. The job server writes the uploaded PDF to this same path before invoking n8n."
       },
       {
         "parameters": {

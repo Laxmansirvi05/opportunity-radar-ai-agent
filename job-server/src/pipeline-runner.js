@@ -15,9 +15,15 @@
 
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
-const N8N_FILE = '/Users/laxmansirvi/.n8n-files/sample-1.pdf';
+// Where the workflow's "Read/Write Files from Disk" node reads the resume.
+// MUST match $env.RESUME_INPUT_PATH that n8n sees, or the pipeline reads a
+// stale file. Defaulted off the home directory rather than hardcoded to one
+// developer's machine.
+const N8N_FILE = process.env.RESUME_INPUT_PATH
+  || path.join(os.homedir(), '.n8n-files', 'resume-input.pdf');
 const WORKFLOW_ID = '3bwLRC7IC0yDFog7';
 
 /** Pull the Build Response payload out of an n8n CLI execution dump. */
@@ -54,6 +60,7 @@ function createCliRunner({ repoRoot, timeoutMs = 15 * 60 * 1000, maxStdoutBytes 
   return function runPipeline(job) {
     return new Promise((resolve, reject) => {
       try {
+        fs.mkdirSync(path.dirname(N8N_FILE), { recursive: true });
         fs.copyFileSync(job.resume_path, N8N_FILE);
       } catch (error) {
         return reject(new Error(`could not stage resume: ${error.message}`));

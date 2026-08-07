@@ -13,7 +13,8 @@ cd "$ROOT" || exit 1
 
 RESUME="${1:?usage: live-run.sh <resume.pdf> <label>}"
 LABEL="${2:?usage: live-run.sh <resume.pdf> <label>}"
-N8N_FILE="/Users/laxmansirvi/.n8n-files/sample-1.pdf"
+N8N_FILE="${RESUME_INPUT_PATH:-$HOME/.n8n-files/resume-input.pdf}"
+mkdir -p "$(dirname "$N8N_FILE")"
 OUTDIR="$ROOT/live-runs/$LABEL"
 mkdir -p "$OUTDIR"
 

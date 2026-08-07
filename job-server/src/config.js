@@ -1,6 +1,12 @@
 'use strict';
 
+const path = require('node:path');
+
+// Load this service's own .env first, then the repository-root .env. The root
+// file is what n8n itself reads, and RESUME_INPUT_PATH must agree between the
+// two or the pipeline reads a different file than the one just uploaded.
 require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env') });
 
 function integer(name, value, fallback) {
   const parsed = Number(value ?? fallback);
