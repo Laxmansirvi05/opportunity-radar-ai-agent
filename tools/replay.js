@@ -88,6 +88,8 @@ function runNode(nodeName, { input = [], nodes = {}, helpers = {} } = {}) {
     Set,
     Map,
     URL,
+    URLSearchParams,
+    Buffer,
     Array,
     Object,
     String,
