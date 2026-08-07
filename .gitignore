@@ -25,3 +25,5 @@ npm-debug.log*
 # Build output
 dist/
 build/
+n8n_output.json
+final_n8n_run.txt

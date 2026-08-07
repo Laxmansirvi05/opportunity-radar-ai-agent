@@ -25,6 +25,8 @@ echo "Importing n8n workflow..."
 npx --yes n8n import:workflow --input=workflows.json
 
 echo "Executing n8n workflow..."
+set -a; source .env; set +a
+export N8N_BLOCK_ENV_ACCESS_IN_NODE=false
 npx --yes n8n execute --id "3bwLRC7IC0yDFog7" > pipeline_execution.json 2> pipeline_execution_error.log
 
 echo "Execution complete. Cleaning up..."
