@@ -66,6 +66,31 @@ const SENIOR_PREFIXES  = ['Senior', 'Staff', 'Principal', ''];           // '' =
 // Qualifiers that indicate seniority beyond a student/early-career candidate.
 const SENIOR_QUALIFIERS = /\b(senior|sr\.|staff|principal|lead|director|vp|head of|manager|architect)\b/i;
 
+// Stage qualifiers that may already be baked into an incoming title. These are
+// stripped before re-expanding so the stage signal comes from the candidate's
+// actual situation rather than from whatever the resume or upstream LLM wrote.
+const LEADING_STAGE_QUALIFIER  = /^(senior|sr\.?|staff|principal|lead|junior|jr\.?|entry[- ]level|new[- ]grad(uate)?|graduate|trainee|associate)\s+/i;
+const TRAILING_STAGE_QUALIFIER = /\s+(intern|internship|trainee|co[- ]?op)$/i;
+
+/**
+ * Remove leading and trailing stage qualifiers from a title, leaving the
+ * bare role. "Junior Frontend Developer Intern" → "Frontend Developer".
+ *
+ * @param {string} title
+ * @returns {string}
+ */
+function stripStageQualifiers(title) {
+  let base = typeof title === 'string' ? title.trim() : '';
+  let previous;
+  // Loop: titles can stack qualifiers ("Junior Trainee Engineer Intern").
+  do {
+    previous = base;
+    base = base.replace(LEADING_STAGE_QUALIFIER, '').replace(TRAILING_STAGE_QUALIFIER, '').trim();
+  } while (base !== previous && base !== '');
+  // Never return empty — a title made only of qualifiers keeps its original form.
+  return base || (typeof title === 'string' ? title.trim() : '');
+}
+
 /**
  * Normalize a single title string.
  *
@@ -129,6 +154,13 @@ function expandTitleForStage(title, careerStage, opportunityType) {
   const stage = (careerStage || '').toLowerCase();
   const result = new Set();
 
+  // Strip any stage qualifier the incoming title already carries before
+  // re-expanding. Resume-derived and LLM-derived titles frequently arrive as
+  // "Frontend Developer Intern" or "Junior Backend Engineer"; without this we
+  // produce "Frontend Developer Intern Intern", and — worse — a job-seeking
+  // candidate keeps an "Intern" title that no longer applies to them.
+  const baseTitle = stripStageQualifiers(title);
+
   // Opportunity type wins when supplied: a final-year student is careerStage
   // "student" but is searching for jobs, so must not get "X Intern" titles.
   // When omitted, fall back to career-stage behaviour.
@@ -139,18 +171,15 @@ function expandTitleForStage(title, careerStage, opportunityType) {
   if (wantsInternship) {
     // internship target → intern/internship suffixes
     for (const suffix of INTERN_SUFFIXES) {
-      result.add(`${title} ${suffix}`);
+      result.add(`${baseTitle} ${suffix}`);
     }
   } else if (ENTRY_LEVEL_STAGES.has(stage) || INTERN_STAGES.has(stage)) {
     // early-career → Junior / Entry Level / New Grad prefixes
     for (const suffix of ENTRY_SUFFIXES) {
-      result.add(suffix ? `${suffix} ${title}` : title);
+      result.add(suffix ? `${suffix} ${baseTitle}` : baseTitle);
     }
   } else {
     // senior / staff / principal / mid-career / unknown → seniority-appropriate prefixes.
-    // Strip any existing leading qualifier from the base title so we don't produce
-    // "Senior Senior AI Systems Architect" when the resume title already contains "Senior".
-    const baseTitle = title.replace(/^(senior|sr\.|staff|principal|lead)\s+/i, '').trim();
     for (const prefix of SENIOR_PREFIXES) {
       result.add(prefix ? `${prefix} ${baseTitle}` : baseTitle);
     }
@@ -159,4 +188,6 @@ function expandTitleForStage(title, careerStage, opportunityType) {
   return [...result];
 }
 
-module.exports = { normalizeTitle, normalizeTitles, expandTitleForStage, SENIOR_QUALIFIERS };
+module.exports = {
+  normalizeTitle, normalizeTitles, expandTitleForStage, stripStageQualifiers, SENIOR_QUALIFIERS,
+};

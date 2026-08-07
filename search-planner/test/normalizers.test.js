@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert   = require('node:assert/strict');
 
-const { normalizeTitle, normalizeTitles, expandTitleForStage, SENIOR_QUALIFIERS }
+const { normalizeTitle, normalizeTitles, expandTitleForStage, stripStageQualifiers, SENIOR_QUALIFIERS }
   = require('../src/normalizers/title-normalizer');
 const { normalizeSkill, normalizeSkills, categorizeSkills, prioritizedSkillList }
   = require('../src/normalizers/skill-normalizer');
@@ -80,6 +80,34 @@ test('expandTitleForStage: early-career → includes bare title and prefixed var
   assert.ok(variants.includes('Backend Engineer'),            'bare title expected');
   assert.ok(variants.some((v) => v.includes('Junior')),       'Junior variant expected');
   assert.ok(variants.some((v) => v.includes('Entry Level')),  'Entry Level variant expected');
+});
+
+test('stripStageQualifiers: removes leading and trailing stage words', () => {
+  assert.equal(stripStageQualifiers('Frontend Developer Intern'), 'Frontend Developer');
+  assert.equal(stripStageQualifiers('Junior Backend Engineer'), 'Backend Engineer');
+  assert.equal(stripStageQualifiers('Entry Level Data Analyst'), 'Data Analyst');
+  assert.equal(stripStageQualifiers('New Grad Software Engineer'), 'Software Engineer');
+  assert.equal(stripStageQualifiers('Senior Platform Engineer'), 'Platform Engineer');
+  assert.equal(stripStageQualifiers('Backend Engineering Internship'), 'Backend Engineering');
+  // Stacked qualifiers
+  assert.equal(stripStageQualifiers('Junior Frontend Developer Intern'), 'Frontend Developer');
+  // Untouched when there is nothing to strip
+  assert.equal(stripStageQualifiers('Data Scientist'), 'Data Scientist');
+  // A title made only of qualifiers keeps its original form rather than emptying
+  assert.equal(stripStageQualifiers('Intern'), 'Intern');
+});
+
+test('expandTitleForStage: does not double a stage qualifier already in the title', () => {
+  // Real case from a captured run: the profile prompt emits role names with
+  // "Intern" baked in, which previously produced "Frontend Developer Intern Intern"
+  // and left job-seekers with an Intern title.
+  const asIntern = expandTitleForStage('Frontend Developer Intern', 'student', 'internship');
+  assert.ok(!asIntern.some((v) => /intern\s+intern/i.test(v)), 'must not double the suffix');
+  assert.ok(asIntern.includes('Frontend Developer Intern'));
+
+  const asJob = expandTitleForStage('Frontend Developer Intern', 'student', 'job');
+  assert.ok(!asJob.some((v) => /intern/i.test(v)), 'job target must shed the baked-in Intern');
+  assert.ok(asJob.includes('Frontend Developer'));
 });
 
 test('SENIOR_QUALIFIERS: detects senior keyword', () => {
