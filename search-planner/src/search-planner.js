@@ -30,6 +30,7 @@ const { normalizeTitles, expandTitleForStage } = require('./normalizers/title-no
 const { prioritizedSkillList, categorizeSkills }  = require('./normalizers/skill-normalizer');
 const { normalizeLocations, locationStrings }      = require('./normalizers/location-normalizer');
 const { buildAllQueries, buildExclusions }         = require('./query-builder');
+const { deriveOpportunityTarget }                  = require('./opportunity-type');
 const config = require('./config');
 
 // Default repository — loaded lazily so unit tests can inject mocks.
@@ -91,11 +92,18 @@ function extractCipComponents(cip) {
     ...(careerDirection.adjacent || []),
   ].filter(Boolean);
 
+  // Opportunity type follows academic year, not careerStage — a 2nd-year and a
+  // final-year student are both "student" but need different opportunity types.
+  // Derived before titles because it decides whether titles get "Intern" suffixes.
+  const opportunityTarget = deriveOpportunityTarget({
+    education:   cip.literal.education,
+    careerStage,
+  });
+
   // Normalize all roles — pass careerStage so senior titles are preserved for senior candidates.
   const allRoles      = normalizeTitles([...rawRoles, ...adjacentRoles], careerStage);
-  const titleVariants = allRoles.length > 0
-    ? expandTitleForStage(allRoles[0], careerStage)
-    : expandTitleForStage('Software Engineer', careerStage); // safe default
+  const baseTitle     = allRoles.length > 0 ? allRoles[0] : 'Software Engineer'; // safe default
+  const titleVariants = expandTitleForStage(baseTitle, careerStage, opportunityTarget.primary);
 
   // Locations from literal or inferred.
   const rawLocations   = (cip.literal.preferredLocations || [])
@@ -109,6 +117,7 @@ function extractCipComponents(cip) {
 
   return {
     careerStage,
+    opportunityTarget,
     skills,
     domainSkills,
     titleVariants,
@@ -134,6 +143,7 @@ function computePlanHash(components) {
     adjacentRoles: components.adjacentRoles.slice(0, 5),
     locations:    components.locations,
     careerStage:  components.careerStage,
+    opportunityType: components.opportunityTarget && components.opportunityTarget.primary,
   });
   return crypto.createHash('sha256').update(payload).digest('hex').slice(0, 16);
 }
@@ -153,14 +163,20 @@ function computePlanHash(components) {
  *   planHash: string
  * }>}
  */
-async function buildSearchPlan({ candidateId, cip, repository }) {
+/**
+ * Compose a SearchPlan from a CIP — the pure, side-effect-free half of planning.
+ *
+ * Persistence is deliberately NOT done here: search_plans.candidate_id is a
+ * foreign key into candidates(id), so any caller that has not persisted a
+ * candidate (for example the stateless n8n pipeline) can still obtain a plan.
+ *
+ * @param {object} options
+ * @param {object} options.cip           — full CIP object
+ * @param {string} [options.candidateId] — echoed into the plan when known
+ * @returns {{ planJson: object, components: object, planHash: string, queries: object[] }}
+ */
+function composeSearchPlan({ cip, candidateId = null }) {
   const startedAt = Date.now();
-
-  if (!candidateId || typeof candidateId !== 'string') {
-    throw new SearchPlanError('INPUT_INVALID', 'candidateId must be a non-empty string');
-  }
-
-  const repo = repository || getRepository();
 
   // 1. Extract and normalize CIP components.
   const components = extractCipComponents(cip);
@@ -182,6 +198,7 @@ async function buildSearchPlan({ candidateId, cip, repository }) {
     normalizedLocations: components.normalizedLocations,
     exclusions:         components.exclusions,
     careerStage:        components.careerStage,
+    opportunityTarget:  components.opportunityTarget,
     freshness:          freshness.t1,  // default; tier-specific overrides set in builders
   });
 
@@ -203,11 +220,38 @@ async function buildSearchPlan({ candidateId, cip, repository }) {
         4: queries.filter((q) => q.tier === 4).length,
       },
       careerStage:           components.careerStage,
+      opportunityType:       components.opportunityTarget.primary,
+      opportunityTypeFallback: components.opportunityTarget.fallback,
+      opportunityTypeSource: components.opportunityTarget.source,
+      graduationYear:        components.opportunityTarget.endYear,
       generationDurationMs:  Date.now() - startedAt,
     },
   };
 
-  // 4. Persist immutably.
+  return { planJson, components, planHash, queries };
+}
+
+/**
+ * Build and PERSIST a candidate's Search Plan.
+ *
+ * Requires a candidate row to already exist — search_plans.candidate_id is a
+ * foreign key. Stateless callers should use composeSearchPlan instead.
+ *
+ * @param {object} options
+ * @param {string} options.candidateId    — UUID of an existing candidate
+ * @param {object} options.cip            — full CIP object
+ * @param {object} [options.repository]   — injectable for testing
+ * @returns {Promise<object>}
+ */
+async function buildSearchPlan({ candidateId, cip, repository }) {
+  if (!candidateId || typeof candidateId !== 'string') {
+    throw new SearchPlanError('INPUT_INVALID', 'candidateId must be a non-empty string');
+  }
+
+  const repo = repository || getRepository();
+  const { planJson, components, planHash, queries } = composeSearchPlan({ cip, candidateId });
+
+  // Persist immutably.
   const row = await repo.createSearchPlan({
     candidateId,
     profileVersion: components.profileVersion,
@@ -222,7 +266,8 @@ async function buildSearchPlan({ candidateId, cip, repository }) {
     queryCount:  queries.length,
     planVersion: config.planVersion,
     planHash,
+    opportunityTarget: components.opportunityTarget,
   };
 }
 
-module.exports = { buildSearchPlan, extractCipComponents, computePlanHash, SearchPlanError };
+module.exports = { buildSearchPlan, composeSearchPlan, extractCipComponents, computePlanHash, SearchPlanError };

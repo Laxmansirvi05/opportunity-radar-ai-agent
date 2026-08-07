@@ -8,6 +8,7 @@ const {
   buildTier4Queries, buildAllQueries, buildExclusions,
 } = require('../src/query-builder');
 const { normalizeLocations } = require('../src/normalizers/location-normalizer');
+const { deriveOpportunityTarget } = require('../src/opportunity-type');
 
 // Shared test fixtures.
 const BASE_PARAMS = {
@@ -19,6 +20,8 @@ const BASE_PARAMS = {
   normalizedLocations: normalizeLocations(['San Francisco, CA']),
   exclusions:          buildExclusions('student'),
   careerStage:         'student',
+  // 2nd/3rd-year student: graduates 3 years out, so the target is an internship.
+  opportunityTarget:   deriveOpportunityTarget({ education: [{ endYear: 2029 }], currentYear: 2026 }),
   freshness:           '24h',
 };
 

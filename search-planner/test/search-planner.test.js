@@ -7,48 +7,69 @@ const { buildSearchPlan, extractCipComponents, computePlanHash, SearchPlanError 
   = require('../src/search-planner');
 
 // ---------------------------------------------------------------------------
-// Minimal valid CIP for testing (mirrors Sprint 2 CIP v2.0.0 schema shape)
+// Minimal valid CIP for testing — real CIP v2.0.0 shape.
+//
+// This fixture is asserted against the canonical validator below, so it can
+// never drift back into a shape that production cannot actually produce.
 // ---------------------------------------------------------------------------
 const VALID_CIP = {
   meta: {
-    schemaVersion: '2.0.0',
-    careerStage:   'student',
+    schemaVersion:     '2.0.0',
+    modelVersion:      'gemini-2.5-flash',
+    builtAt:           '2026-08-07T00:00:00.000Z',
+    resumeHash:        'abc123',
     overallConfidence: 0.85,
-    resumeHash:    'abc123',
   },
   literal: {
-    skills: [
-      { name: 'Python',     category: 'technical' },
-      { name: 'TypeScript', category: 'technical' },
-      { name: 'Node.js',    category: 'technical' },
-      { name: 'Docker',     category: 'tool'      },
-      { name: 'Agile',      category: 'soft'      },
-    ],
-    workExperience: [
-      { title: 'Software Engineer', company: 'Acme Corp', technologies: ['Python'] },
-    ],
+    fullName:     'Test Candidate',
+    email:        null,
+    phone:        null,
+    linkedinUrl:  null,
+    githubUrl:    null,
+    portfolioUrl: null,
+    rawSkills:    ['Python', 'TypeScript', 'Node.js', 'Docker', 'Agile'],
     education: [
-      { institution: 'State University', degree: "Bachelor's", field: 'Computer Science', gpa: 3.8 },
+      {
+        institution: 'State University',
+        degree:      "Bachelor's",
+        field:       'Computer Science',
+        startYear:   2023,
+        endYear:     2029,
+        gpa:         '3.8',
+      },
     ],
-    preferredLocations: [
-      { location: 'San Francisco, CA' },
-      { location: 'Remote' },
+    experience: [
+      { company: 'Acme Corp', title: 'Software Engineer', startDate: '2025', endDate: 'present', description: null, technologies: ['Python'] },
     ],
-    workAuthorization: { value: 'us_citizen', confidence: 1.0, evidence: ['inferred from profile'] },
-    openToRelocation:  { value: true,        confidence: 0.8, evidence: ['stated preference'] },
+    projects:       [],
+    certifications: [],
+    publications:   [],
+    awards:         [],
+    languages:      [],
+    preferredLocations: ['San Francisco, CA', 'Remote'],
   },
   inferred: {
-    careerTrajectory: {
-      primaryDirection: 'Full Stack Engineer',
-      adjacentRoles:    ['Backend Engineer', 'AI Application Developer'],
-      confidence:       0.8,
-      evidence:         ['Python backend + TypeScript frontend combination'],
+    careerStage: { value: 'student', confidence: 0.9, evidence: ['Enrolled in B.S. Computer Science'] },
+    canonicalSkills: [
+      { canonical: 'Python',           raw: 'Python',     category: 'language',  confidence: 0.95 },
+      { canonical: 'TypeScript',       raw: 'TypeScript', category: 'language',  confidence: 0.9  },
+      { canonical: 'Web Development',  raw: 'web dev',    category: 'domain',    confidence: 0.8  },
+      { canonical: 'Cloud Computing',  raw: 'cloud',      category: 'domain',    confidence: 0.75 },
+    ],
+    inferredRoles: [
+      { role: 'Full Stack Engineer', confidence: 0.8, evidence: ['Python backend + TypeScript frontend'] },
+      { role: 'Backend Engineer',    confidence: 0.7, evidence: ['Python and Node.js experience'] },
+    ],
+    careerDirection: {
+      primary:    'Full Stack Engineer',
+      adjacent:   ['Backend Engineer', 'AI Application Developer'],
+      confidence: 0.8,
+      evidence:   ['Python backend + TypeScript frontend combination'],
     },
-    domainExpertise: {
-      value:      ['web development'],
-      confidence: 0.75,
-      evidence:   ['React and Node.js projects'],
-    },
+    searchKeywords: ['Full Stack Engineer', 'Backend Engineer', 'Python', 'TypeScript', 'Node.js'],
+    searchIntent:   'Seeking a full stack engineering internship focused on web platforms.',
+    workAuthorization: { value: 'citizen', confidence: 1.0, evidence: ['inferred from profile'] },
+    openToRelocation:  { value: true,      confidence: 0.8, evidence: ['stated preference'] },
   },
 };
 
@@ -68,10 +89,21 @@ function makeMockRepo(overrides = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Fixture integrity
+// ---------------------------------------------------------------------------
+
+test('VALID_CIP fixture is accepted by the canonical CIP v2.0.0 validator', () => {
+  // Guards against the fixture drifting back to a pre-v2.0.0 shape that the
+  // profile builder can never actually emit.
+  const { validateCandidateProfile } = require('../../data/src/schemas/candidate-profile-schema');
+  assert.doesNotThrow(() => validateCandidateProfile(VALID_CIP));
+});
+
+// ---------------------------------------------------------------------------
 // extractCipComponents
 // ---------------------------------------------------------------------------
 
-test('extractCipComponents: extracts careerStage from meta', () => {
+test('extractCipComponents: extracts careerStage from inferred.careerStage.value', () => {
   const c = extractCipComponents(VALID_CIP);
   assert.equal(c.careerStage, 'student');
 });
@@ -101,10 +133,20 @@ test('extractCipComponents: throws SearchPlanError for missing sections', () => 
 });
 
 test('extractCipComponents: handles empty work experience', () => {
-  const cip = { ...VALID_CIP, literal: { ...VALID_CIP.literal, workExperience: [] } };
-  const c   = extractCipComponents(cip);
+  // Both experience and careerDirection must be emptied — otherwise adjacentRoles
+  // still supplies a title and the default-fallback path is never exercised.
+  const cip = {
+    ...VALID_CIP,
+    literal:  { ...VALID_CIP.literal, experience: [] },
+    inferred: {
+      ...VALID_CIP.inferred,
+      careerDirection: { ...VALID_CIP.inferred.careerDirection, primary: null, adjacent: [] },
+    },
+  };
+  const c = extractCipComponents(cip);
   // Falls back to default "Software Engineer"
   assert.ok(c.titleVariants.length > 0);
+  assert.ok(c.titleVariants.some((v) => v.includes('Software Engineer')));
 });
 
 // ---------------------------------------------------------------------------
@@ -126,7 +168,13 @@ test('computePlanHash: deterministic for same components', () => {
 
 test('computePlanHash: differs for different career stages', () => {
   const c1 = extractCipComponents(VALID_CIP);
-  const c2 = extractCipComponents({ ...VALID_CIP, meta: { ...VALID_CIP.meta, careerStage: 'mid-career' } });
+  const c2 = extractCipComponents({
+    ...VALID_CIP,
+    inferred: {
+      ...VALID_CIP.inferred,
+      careerStage: { ...VALID_CIP.inferred.careerStage, value: 'mid-career' },
+    },
+  });
   assert.notEqual(computePlanHash(c1), computePlanHash(c2));
 });
 

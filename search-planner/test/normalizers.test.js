@@ -36,9 +36,18 @@ test('normalizeTitles: deduplicates case-insensitively', () => {
   assert.equal(result[0], 'Backend Engineer');
 });
 
-test('normalizeTitles: removes senior qualifiers', () => {
-  const result = normalizeTitles(['Senior Backend Engineer', 'Staff Engineer', 'Backend Engineer']);
-  assert.deepEqual(result, ['Backend Engineer']);
+test('normalizeTitles: removes senior qualifiers for student/early-career', () => {
+  const titles = ['Senior Backend Engineer', 'Staff Engineer', 'Backend Engineer'];
+  assert.deepEqual(normalizeTitles(titles, 'student'), ['Backend Engineer']);
+  assert.deepEqual(normalizeTitles(titles, 'early-career'), ['Backend Engineer']);
+});
+
+test('normalizeTitles: preserves senior qualifiers for senior/mid-career', () => {
+  // A senior candidate's own title must survive normalization — stripping it
+  // would search for junior roles on their behalf.
+  const titles = ['Senior Backend Engineer', 'Staff Engineer', 'Backend Engineer'];
+  assert.deepEqual(normalizeTitles(titles, 'senior'), titles);
+  assert.deepEqual(normalizeTitles(titles, 'mid-career'), titles);
 });
 
 test('normalizeTitles: handles empty array', () => {
@@ -48,6 +57,20 @@ test('normalizeTitles: handles empty array', () => {
 test('expandTitleForStage: student → intern suffixes', () => {
   const variants = expandTitleForStage('Backend Engineer', 'student');
   assert.ok(variants.some((v) => v.includes('Intern')));
+});
+
+test('expandTitleForStage: opportunityType overrides careerStage for titles', () => {
+  // A final-year student is careerStage "student" but targets jobs. Without the
+  // override they would get "Backend Engineer Intern" titles alongside an
+  // "entry level" keyword — contradictory queries that search the wrong roles.
+  const jobVariants = expandTitleForStage('Backend Engineer', 'student', 'job');
+  assert.ok(!jobVariants.some((v) => /intern/i.test(v)), 'job target must not produce Intern titles');
+  assert.ok(jobVariants.includes('Backend Engineer'), 'bare title expected');
+  assert.ok(jobVariants.some((v) => v.includes('Entry Level')), 'Entry Level variant expected');
+
+  // And the internship target still produces intern titles for the same stage.
+  const internVariants = expandTitleForStage('Backend Engineer', 'student', 'internship');
+  assert.ok(internVariants.every((v) => /intern/i.test(v)), 'internship target expects Intern titles');
 });
 
 test('expandTitleForStage: early-career → includes bare title and prefixed variants', () => {

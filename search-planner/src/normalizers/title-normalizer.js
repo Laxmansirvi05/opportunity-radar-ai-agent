@@ -125,17 +125,23 @@ function normalizeTitles(rawTitles, careerStage) {
  * @param {string} careerStage  — from CIP meta.careerStage
  * @returns {string[]}
  */
-function expandTitleForStage(title, careerStage) {
+function expandTitleForStage(title, careerStage, opportunityType) {
   const stage = (careerStage || '').toLowerCase();
   const result = new Set();
 
+  // Opportunity type wins when supplied: a final-year student is careerStage
+  // "student" but is searching for jobs, so must not get "X Intern" titles.
+  // When omitted, fall back to career-stage behaviour.
+  const wantsInternship = opportunityType
+    ? opportunityType === 'internship'
+    : INTERN_STAGES.has(stage);
 
-  if (INTERN_STAGES.has(stage)) {
-    // student → intern/internship suffixes
+  if (wantsInternship) {
+    // internship target → intern/internship suffixes
     for (const suffix of INTERN_SUFFIXES) {
       result.add(`${title} ${suffix}`);
     }
-  } else if (ENTRY_LEVEL_STAGES.has(stage)) {
+  } else if (ENTRY_LEVEL_STAGES.has(stage) || INTERN_STAGES.has(stage)) {
     // early-career → Junior / Entry Level / New Grad prefixes
     for (const suffix of ENTRY_SUFFIXES) {
       result.add(suffix ? `${suffix} ${title}` : title);

@@ -60,15 +60,17 @@ function buildExclusions(careerStage) {
  * @param {string}   params.freshness
  * @returns {object[]}
  */
-function buildTier1Queries({ titleVariants, skills, locations, exclusions, careerStage, freshness }) {
+function buildTier1Queries({ titleVariants, skills, locations, exclusions, careerStage, opportunityTarget, freshness }) {
   const queries = [];
   const topSkills = skills.slice(0, config.maxQueriesPerTier);
 
-  // Stage-specific keyword appended to each Tier 1 query.
+  // Opportunity type drives the keyword, not careerStage — a final-year student is
+  // still careerStage "student" but must be searched for jobs, not internships.
   // Senior candidates get no junior/entry modifier — the title variants carry the seniority signal.
-  const stageKeyword = careerStage === 'student'       ? 'internship'
-                     : careerStage === 'early-career'  ? 'entry level'
-                     : null; // senior / mid / unknown — no modifier
+  const stageKeyword = opportunityTarget.primary === 'internship' ? 'internship'
+                     : careerStage === 'early-career'             ? 'entry level'
+                     : opportunityTarget.fallback.includes('internship') ? 'entry level'
+                     : null; // already-graduated / senior / mid — no modifier
 
   for (const skill of topSkills) {
     const roles    = titleVariants.slice(0, 2); // top 2 title variants per skill
@@ -104,11 +106,11 @@ function buildTier1Queries({ titleVariants, skills, locations, exclusions, caree
  * @param {string}   params.freshness
  * @returns {object[]}
  */
-function buildTier2Queries({ adjacentRoles, skills, locations, exclusions, careerStage, freshness }) {
+function buildTier2Queries({ adjacentRoles, skills, locations, exclusions, opportunityTarget, freshness }) {
   const queries  = [];
   const topRoles = adjacentRoles.slice(0, config.maxQueriesPerTier);
   const topSkills = skills.slice(0, 3);
-  const suffix    = careerStage === 'student' ? 'Intern' : '';
+  const suffix    = opportunityTarget.primary === 'internship' ? 'Intern' : '';
 
   for (const role of topRoles) {
     const displayRole = suffix ? `${role} ${suffix}` : role;
@@ -144,14 +146,15 @@ function buildTier2Queries({ adjacentRoles, skills, locations, exclusions, caree
  * @param {string}   params.freshness
  * @returns {object[]}
  */
-function buildTier3Queries({ domainSkills, titleVariants, locations, exclusions, careerStage, freshness }) {
+function buildTier3Queries({ domainSkills, titleVariants, locations, exclusions, careerStage, opportunityTarget, freshness }) {
   const queries = [];
 
-  // Stage-specific discovery word injected into Tier 3 keyword list.
+  // Discovery word follows opportunity type first, then careerStage for entry-level nuance.
   // Senior candidates get no junior/intern term — the domain skill carries the signal.
-  const stageWord = careerStage === 'student'      ? 'internship'
-                  : careerStage === 'early-career' ? 'new grad'
-                  : null; // senior / mid / unknown — no modifier
+  const stageWord = opportunityTarget.primary === 'internship'          ? 'internship'
+                  : opportunityTarget.fallback.includes('internship')   ? 'new grad'
+                  : careerStage === 'early-career'                      ? 'new grad'
+                  : null; // already-graduated / senior / mid — no modifier
 
   const domains = domainSkills.slice(0, config.maxQueriesPerTier);
 
