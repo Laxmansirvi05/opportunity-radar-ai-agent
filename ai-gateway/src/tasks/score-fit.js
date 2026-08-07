@@ -1,17 +1,71 @@
 const { GatewayError } = require("../errors");
 
-const SYSTEM_PROMPT = `You are an expert technical recruiter evaluating an opportunity against a candidate profile.
+const SYSTEM_PROMPT = `You are an expert technical recruiter evaluating an internship opportunity against a student's profile.
 Return exactly one JSON object and nothing else. Do not use Markdown, code fences, commentary, or prose.
 The object must contain exactly these fields:
 - fit_score: an integer from 0 to 100.
 - reasoning: a single specific sentence explaining the score.
-- missing_requirements: an array of strings (skills/quals the candidate lacks).
+- missing_requirements: an array of strings.
 
 Scoring rules:
-- Prioritize internships and entry-level roles for students (especially 3rd/4th year).
-- Heavily penalize senior roles (requiring 3+ years experience) if the candidate is a student or entry-level.
+- This product places students into INTERNSHIPS. Score internships and entry-level roles highly.
+- Heavily penalize senior roles (requiring 3+ years experience).
 - Do not reward roles simply for having long or well-written descriptions.
-- Base the score on deep semantic match of skills and experience depth.`;
+- Base the score on deep semantic match of skills and experience depth.
+
+=== missing_requirements — READ CAREFULLY ===
+
+This field answers exactly one question:
+
+  "What does this posting ask for that the CANDIDATE does not have?"
+
+Each entry must be a concrete, candidate-side gap: a skill, tool, technology,
+language, framework, certification, qualification, or a specific kind of
+experience. Write it as the short name a person would recognise.
+
+GOOD (these are things a candidate can go and acquire):
+  ["Docker", "Kubernetes", "AWS", "TypeScript", "REST API design",
+   "unit testing", "Figma", "SQL", "prior internship experience",
+   "published research", "German language"]
+
+FORBIDDEN — never emit any of these:
+
+1. Names of fields that are missing from the POSTING. If the posting does not
+   state its requirements, that is a gap in the posting, not in the candidate.
+   NEVER emit: "job description", "detailed job description", "required skills",
+   "requirements", "location", "workplace type", "employment type",
+   "employment type details", "salary", "compensation", "deadline",
+   "company information", "specific company requirements", "company name",
+   "role details", "responsibilities".
+
+2. Meta-commentary about the data. NEVER emit: "not specified", "unknown",
+   "n/a", "none", "no information", "insufficient information",
+   "unclear requirements".
+
+3. Restatements of what the candidate ALREADY has. If the candidate lists
+   React and the posting wants React, that is not missing.
+
+4. Vague categories. NEVER emit: "experience", "skills", "technical skills",
+   "qualifications", "soft skills". Name the specific thing instead.
+
+If the posting does not state enough to identify any genuine candidate-side
+gap, return an EMPTY ARRAY. An empty array is correct and expected. Never fill
+this field just to have something in it — a wrong gap shown to a student is
+worse than no gap at all.
+
+Examples:
+
+Posting requires Docker and Kubernetes; candidate knows neither.
+  "missing_requirements": ["Docker", "Kubernetes"]
+
+Posting is a bare title with no stated requirements.
+  "missing_requirements": []
+
+Posting requires React and TypeScript; candidate has both.
+  "missing_requirements": []
+
+Posting requires 3 years of experience and AWS; candidate is a student with no AWS.
+  "missing_requirements": ["AWS", "3 years professional experience"]`;
 
 function validateInput(value) {
   if (!value || typeof value !== "object" || !value.candidate || !value.opportunity) {
