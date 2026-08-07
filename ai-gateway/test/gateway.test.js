@@ -112,14 +112,15 @@ test("loads a complete production configuration", () => {
   const config = loadConfig({
     GATEWAY_API_KEY: "gateway-secret",
     GEMINI_API_KEY: "gemini-secret",
-    GROQ_API_KEY: "groq-secret"
+    GROQ_API_KEY: "groq-secret",
+    OPENROUTER_API_KEY: "openrouter-secret"
   });
   // Timeouts were deliberately raised (walkthrough.md: PROVIDER_TIMEOUT_MS 25s -> 60s,
   // to let slower free-tier fallback models finish); this expectation was never
   // updated and had been failing against config.js since that change.
   assert.equal(config.globalTimeoutMs, 120_000);
   assert.equal(config.providerTimeoutMs, 60_000);
-  assert.equal(config.maxRetries, 2);
+  assert.equal(config.maxRetries, 3);
 });
 
 test("extract_opportunity rejects Markdown and validates only the predefined schema", () => {

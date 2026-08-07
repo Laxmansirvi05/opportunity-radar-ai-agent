@@ -456,7 +456,7 @@
               },
               {
                 "name": "input",
-                "value": "={{$json.clean_text ? $json.clean_text.substring(0, 49500) : ($json.main_content ? $json.main_content.substring(0, 49500) : \"\")}}"
+                "value": "={{$json.clean_text ? $json.clean_text.substring(0, 18000) : ($json.main_content ? $json.main_content.substring(0, 18000) : \"\")}}"
               }
             ]
           },
@@ -472,7 +472,9 @@
         "name": "HTTP Request2",
         "retryOnFail": true,
         "maxTries": 3,
-        "waitBetweenTries": 2000
+        "waitBetweenTries": 2000,
+        "onError": "continueRegularOutput",
+        "notes": "input is capped well under the provider token budget: groq allows 12k tokens/min and 49500 chars is ~12.4k tokens on its own, which returned 503 and aborted the run. onError=continueRegularOutput so a single failed extraction degrades one item instead of killing the pipeline."
       },
       {
         "parameters": {

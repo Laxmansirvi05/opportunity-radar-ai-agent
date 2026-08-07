@@ -55,7 +55,12 @@ class GatewayService {
             retryable: failure.retryable
           });
           if (!failure.retryable || attempt === this.config.maxRetries) break;
-          await wait(300 * 2 ** attempt, signal);
+          // Backoff must outlast a per-minute token budget, not just a blip.
+          // Groq allows 12k tokens/min and reports ~13s to reset; the previous
+          // 300ms base gave up after ~2s total, so a whole pipeline run could
+          // fail on a budget that would have cleared shortly after.
+          // 2.5s -> 5s -> 10s covers that window.
+          await wait(2_500 * 2 ** attempt, signal);
         }
       }
     }
