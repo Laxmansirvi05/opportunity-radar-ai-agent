@@ -269,3 +269,67 @@ thresholds stated up front.
    clever; webhook mode is unverifiable within tonight's budget.
 4. **Moved `test-extract.js` out of the test glob rather than deleting it.** It
    was a scratch script making live API calls on every `npm test`.
+
+---
+
+# Final Run — finish the agent, make it integration-ready
+
+**6 of 14 criteria met. 6 blocked by exhausted quota, 2 genuinely not met.**
+Live runs this session: 1 (the carried-over job-server run) + ~26 scoring calls.
+
+## Phase A — broaden-and-retry
+
+Corrected the premise first: the constraint was never discovery breadth. Runs
+already discover 160–181 specific postings; the gate was discarding them while
+admitting listing pages, because aggregator detection looked only at the TITLE
+and DOMAIN, never the URL path. Added `LISTING_URL_PATTERNS`. Result: zero
+listing pages admitted across four captured runs.
+
+Broadening implemented as a conditional second admission pass (strict → if <12
+admitted, relax the candidate-relevance floor over already-discovered postings).
+Not a cyclic graph: a cycle would re-enter the already-completed
+`splitInBatches`, the same mechanism that forced `batchSize: 1`.
+
+Verified conditional: fires on thin runs (11→17, 5→22), skipped on healthy ones.
+
+## Phase B — UNVERIFIED
+
+All three providers hit hard limits. One clean sample before quota died:
+`["Azure","ERP systems"]`, zero artifacts — promising, not verification.
+
+Also found and fixed a pacing bug in the harness: it fired every 1.5s against
+Groq's 12k tokens/min (~6 calls/min at ~2k tokens per scoring call), producing
+11 failures out of 12 that looked like exhausted quota but was not.
+
+## Phases C, D — blocked on quota
+
+## Phase E — integration readiness
+
+`INTEGRATION_GUIDE.md` and `RUNBOOK.md` written from real incidents.
+Key rotated to `$env` in all four nodes plus a regenerated secret; dead literal
+purged from 13 tracked files. Model config reconciled on `gemini-flash-latest`
+(the `.env.example` value returned 404 — anyone bootstrapping got a dead
+provider). Stale `.env.example` values corrected; job-server and search-planner
+sections added.
+
+**Clean-machine check found two real blockers**, both fixed:
+1. `/Users/laxmansirvi/.n8n-files/sample-1.pdf` hardcoded in three places — the
+   workflow was unrunnable on any other machine. Now `$env.RESUME_INPUT_PATH`.
+2. RUNBOOK jumped to migrations; a fresh clone has no `node_modules`.
+
+## Also fixed
+
+The carried-over live job exposed an orphaned-process bug: it was swept
+correctly at 30 min, but two n8n processes survived. Root cause in two layers —
+`execFile`'s timeout signals only the direct child, AND the first fix passed
+`detached: true` to `execFile`, which **silently ignores it**. Verified
+directly, then rewritten with `spawn`. Regression test proves the mechanism.
+
+## Decisions made
+
+1. Fixed the gate before building broadening — the brief's premise was wrong.
+2. Second admission pass over a cyclic graph (measured risk, not assumption).
+3. Enforced rule 5 despite counts dropping to 1–4.
+4. Reconciled on the model alias, not a pinned version.
+5. Stopped live calls when all providers hit hard limits rather than declaring
+   anything verified.

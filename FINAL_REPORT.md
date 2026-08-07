@@ -1,279 +1,236 @@
-# Final Report — Opportunity Radar autonomous run
+# Final Report — Opportunity Radar internship agent
 
-Tasks 1–6 from `CLAUDE_CODE_HANDOFF.md`. Task 7 not started, as instructed.
-
-> **Read this first.** I never executed the full n8n pipeline. Zero of the ~12
-> budgeted live pipeline runs were used. Everything about the *workflow* below is
-> verified by replaying the **real node code** from `workflows.json` against
-> fixtures captured from your last real run — not by an `n8n execute`. That is a
-> genuine gap: node code can be correct in a sandbox and still fail on n8n
-> wiring, expression syntax, or credentials. **Tasks 3–6 should be considered
-> unproven end-to-end until one live run is done.**
+> **Headline: 6 of 14 criteria met. Six are blocked by exhausted API quota, two
+> are genuinely not met.** All three LLM providers hit hard limits partway
+> through this run (Groq daily tokens, Gemini 20/day, OpenRouter), so every
+> criterion needing live execution is reported **unverified**, not passed.
+>
+> **The service is not integration-ready today.** See §9.
 
 ---
 
-## 1. Status per task
+## 1. The fourteen criteria
 
-| Task | Status | Evidence |
-|---|---|---|
-| 1 — Scoring failures visible + reduced | **Complete** | Live measurement + fixture replay |
-| 2 — Year-based routing | **Complete** | 16 unit tests + live service probe |
-| 3 — Wire workflow to search-planner | **Complete, adapted** | Fixture replay; premise of the task was wrong (below) |
-| 4 — Score floor + tier contract | **Complete** | Fixture replay + 5 edge cases |
-| 5 — Broaden-and-retry, weak-resume exit | **PARTIAL** | Weak-resume done; **broaden-and-retry NOT built** |
-| 6 — Parallelize the loop | **Partial** | Correctness proven; **wall-clock never measured** |
-
----
-
-## 2. Three separate lists
-
-### 2a. Verified with real execution
-- **Scoring failure rate**, before and after — real ai-gateway calls against live
-  Groq/Gemini (55 calls post-fix).
-- **Gemini's 20-request/day quota** — confirmed directly against Google's API.
-- **OpenRouter 0-for-19** — confirmed from `ai-gateway.log`.
-- **`/search-plan/preview` and `/search-plan/build`** — booted the real service;
-  `/build` returns FK violation `23503`, `/preview` returns correct plans.
-- **Year routing** — live service, three graduation years.
-- **The stale test fixture is invalid** — canonical validator rejects it.
-- **Real pipeline failure rate of 52.6%** — computed from your captured run.
-
-### 2b. Unit-tested / fixture-replayed only (NOT run through n8n)
-- All `workflows.json` node changes (tasks 1, 3, 4, 5, 6). Executed as real code
-  in a sandbox against real captured data, but never inside n8n.
-- search-planner: 79 tests passing.
-- 18 offline edge cases.
-- Task 6's per-item conversion — correctness proven, speed not.
-
-### 2c. Untested
-- **Any full pipeline run.** No `n8n execute` was performed at all.
-- **Tavily behaviour** with the new query text (opportunity-type-driven terms).
-  Query *shape* changed; whether it returns better postings is unmeasured.
-- **The `Build Response` node inside n8n** — it is newly added and has never run
-  in n8n. Its connection was added programmatically.
-- **Batch size 5 under real load** — untested against rate limits. Five
-  concurrent scoring calls may reintroduce throttling that pacing had solved.
-- **Whether `runOnceForEachItem` nodes behave identically in n8n** to my sandbox.
-- Scanned/image-only PDF, empty PDF, non-PDF with `.pdf` extension, 5+ page
-  resume, non-English resume — **not tested**; these need real pipeline runs.
+| # | Criterion | Status | Evidence |
+|---|---|---|---|
+| 1 | Broaden-and-retry works | **Partial** | Broadening is built and verified at discovery level offline; the `<5 → ≥5` end-to-end proof needs a live run. Not met. |
+| 2 | Never pads, never fabricates | **Met** | Enforced and verified across 5 captured runs; counts dropped to 1–4 honestly |
+| 3 | Weak-resume returns real gaps | **Not met** | 1 successful live sample was clean; 11/12 calls failed on quota. Unverified. |
+| 4 | Weak-resume only after broadening | **Met (offline)** | Ordering enforced in code and surfaced in the response; verified by replay |
+| 5 | Job server live end-to-end | **Not met** | Stub-verified only. The one live attempt was swept at 30 min on quota exhaustion |
+| 6 | 5 real resumes complete | **Not met** | 3 completed in Phase 1; the remaining 2 blocked on quota |
+| 7 | Internship routing across all 5 | **Partial** | 3 of 5 verified live, all correct |
+| 8 | Scoring failure rate <10% | **Met** | 0% across 4 live runs (11/11, 28/28, 8/8, 12/12) |
+| 9 | All test suites green | **Met** | 222 tests, 0 failures, every prior failure attributed |
+| 10 | Every edge case documented | **Partial** | 18 verified offline; PDF-input and Tavily-condition cases untested |
+| 11 | Concurrent submissions handled | **Met (stub)** | Max observed concurrency 1, both jobs completed; SQL limit verified against real Postgres |
+| 12 | Crash recovery works | **Met** | A real job was swept to `failed`/`PIPELINE_TIMEOUT`. Also exposed and fixed an orphaned-process bug |
+| 13 | `INTEGRATION_GUIDE.md` written | **Met** | Written, with a limitations section |
+| 14 | Clean-machine startup verified | **Partial** | Fresh clone → schema → job completes, but only stub-backed. Two real blockers found and fixed |
 
 ---
 
-## 3. Scoring failure rate
+## 2. Four separate lists
 
-| Measurement | Sample | Failure rate |
-|---|---|---|
-| **Before** — historical `ai-gateway.log` | 49 chat requests | **20.4%** (10 failed) |
-| **Before** — your captured pipeline run, per opportunity | 19 scored items | **52.6%** (10 failed) |
-| **After** — live, paced ~2s | 30 calls | **3.3%** (1 failed) |
-| **After** — live, paced ~2s | 25 calls | **0.0%** (0 failed) |
-| **After — combined** | **55 calls** | **1.8%** (1 failed) |
+### 2a. Live-verified (real execution, real APIs)
+- Scoring failure rate: **0%** across 4 runs (11/11, 28/28, 8/8, 12/12)
+- Internship routing on **3 real student resumes** (2nd-year CS, final-year CS, non-CS mechanical) — all `internship`, 45/45 queries mentioning intern
+- Graduation-year extraction after the prompt fix: `null` → `2029` via `education_end_year`
+- Loop item conservation at `batchSize: 1`: 11/11, 8/8, 46/46
+- **Crash recovery**: a real job swept to `failed` with `PIPELINE_TIMEOUT` at 30 min
+- Provider limits, with exact error bodies (Groq TPD/TPM, Gemini 20/day, retired-model 404)
+- Postgres job repository including the SQL-enforced concurrency limit
 
-The single post-fix failure was an anomalous `GLOBAL_TIMEOUT`: one call took
-**363 seconds** against a configured 120s global budget. The budget did not
-enforce. **Unexplained — see Still Broken.**
+### 2b. Stub-verified (real code, simulated pipeline)
+- The entire job server: 17 tests — upload, polling, oversized/wrong-type/missing file, unknown and malformed `job_id`, concurrent submissions, crash → `PIPELINE_FAILED`, stuck → `PIPELINE_TIMEOUT`, interval sweep, CORS
+- End-to-end job through real HTTP + real Postgres + real PDF, stubbed pipeline
+- Clean-machine startup from a fresh clone
 
-In the final 25-call run every request was served by Groq on the first attempt,
-with zero provider failures.
+### 2c. Unit-tested / replay-verified only (real node code, captured data, no APIs)
+- Broadening: conditional, fires on thin runs only (11→17, 5→22), skipped on healthy ones (22, 14)
+- Quality gate now admits **zero** listing pages across 4 captured runs
+- Contract shape, `apply_url` presence, tier validity, no internal-field leakage
+- Score floor, tier contract, weak-resume exit, scoring-failure visibility
+- 18 edge cases
+- 222 tests across 5 suites
 
-**Root cause of the original failures** (not in the handoff): Gemini's configured
-model `gemini-3.5-flash` has a **20-request/day** free-tier quota. Gemini was
-first in the chain, so it consumed the first ~20 calls then failed all day:
-
-```
-RESOURCE_EXHAUSTED ... limit: 20, GenerateRequestsPerDayPerProjectPerModel-FreeTier
-```
-
-Historical per-provider: gemini 81/95 attempts failed (85%), groq 10/39 (26%),
-**openrouter 19/19 (100%)**.
-
----
-
-## 4. Runtime before/after parallelization
-
-**Not measured.** This is a required acceptance criterion and it is absent.
-
-- Before: ~5–8 min (your figure), `batchSize` unset (= 1). Confirmed by the
-  captured run showing 20 Loop iterations for 19 items.
-- After: unknown. Requires a live run.
+### 2d. Untested
+- **Any live run since the Phase A changes.** The gate rewrite, broadening, key rotation, and `RESUME_INPUT_PATH` change have **never executed in n8n.** This is the single largest gap.
+- Criterion 1's `<5 → ≥5` proof
+- The rewritten `score_fit` gap prompt (1 sample only)
+- The job server against the **real** pipeline
+- Resumes 4 and 5 (thin, no-location)
+- Scanned/image-only PDF, empty PDF, non-PDF with `.pdf` extension, 5+ pages, non-English
+- Tavily returning zero results / only junk; every scrape failing
+- DB-unreachable behaviour
+- Clean-machine startup against the real pipeline
 
 ---
 
-## 5. Edge case table
+## 3. Per-resume results
 
-18 cases exercised offline, 0 flagged. Items marked **NOT TESTED** need live runs.
+Three of five, from Phase 1. Resumes 4 and 5 were generated but never run.
+
+| Resume | Completed | Returned | All internships | Scoring failures | Notes |
+|---|---|---|---|---|---|
+| Strong CS, 2nd year (grad 2029) | yes | 5, then 10 after fixes | yes, 45/45 queries | 0/11, 0/28 | `graduation_year` was null before the prompt fix |
+| Strong CS, final year (grad 2027) | yes | 4 | yes, 45/45 | 0/8 | |
+| Non-CS mechanical (grad 2028) | **aborted** | — | yes, 45/45, roles `Mechanical Engineering Intern` | 0/12 | render-service died mid-run; `playwright` had no `onError`. Fixed. |
+| Thin/sparse | **not run** | — | — | — | quota |
+| No location stated | **not run** | — | — | — | quota |
+
+Counts above **predate** the product-rule-5 enforcement. Replaying those same
+runs through the current code gives **4, 4, 1, 1, 1** usable opportunities.
+
+---
+
+## 4. Scoring failure rate and runtime
+
+| Measure | Value |
+|---|---|
+| Baseline (original captured run) | **52.6%** (10/19) |
+| After payload projection, 4 live runs | **0%** (0/59) |
+| Runtime, `batchSize: 1` | 78s (11 items), 402s (8), 484s (28), 781s (24, aborted) |
+| Runtime, parallelized | **not available** — batching reverted for correctness |
+
+Runtime scales with item count, not configuration. There is no honest
+"after parallelization" number because parallelization is not shippable: the
+`If` node's branches reconverge into `splitInBatches`, so any batch >1 makes the
+done-branch fire repeatedly and emit partial results.
+
+---
+
+## 5. Edge cases
 
 | Case | Observed |
 |---|---|
-| 2nd-year student | → `internship`, source `education_end_year` |
-| Final-year student | → `job` (F3 fixed) |
-| Graduated (past endYear) | → `job` |
-| Missing/unparseable endYear | → careerStage fallback, **recorded** via `source` + `fallbackReason` |
-| No education section | → `internship` via `career_stage_fallback` |
-| No work experience | → 45 queries still generated |
-| Zero technical skills | → 60 queries still generated |
-| No location anywhere | → 52 queries; geographies `["country","international_remote"]` |
-| Multiple degrees (array) | → uses most recent (2028); **was broken, fixed** |
-| Graduate w/ multiple degrees | → `job`, gradYear 2025 |
-| Experienced professional | → `job`, 0 queries mention intern |
-| Zero opportunities scored | → `weak_profile`, count 0 |
-| **Scoring fails for every item** | → `weak_profile`, `{attempted:8, succeeded:0, failed:8}`, cause **named as provider errors** — NOT reported as "all scored low" |
-| Only junk (all below floor) | → 0 returned, `below_score_floor: 12`, nothing padded |
-| Fewer than 5 qualify | → `weak_profile`, returns the 3 that qualified + gaps |
-| More than 10 qualify | → exactly 10, best-ranked, `quota_status: full` |
-| All in one geographic bucket | → 10 returned, all `same_state`, widening used |
-| Duplicate postings | Handled by pre-existing dedup in the quality gate; **not re-tested** |
-| Scanned/image-only PDF | **NOT TESTED** |
-| Empty/near-empty PDF | **NOT TESTED** |
-| Non-PDF with `.pdf` extension | **NOT TESTED** |
-| Very long resume (5+ pages) | **NOT TESTED** |
-| Non-English resume | **NOT TESTED** |
-| Tavily returns zero results | **NOT TESTED** |
-| Tavily returns only aggregators | **NOT TESTED** |
-| Every scrape fails | **NOT TESTED** |
+| 2nd-year / final-year / graduated | all → `internship`; year used only as a student-status guard |
+| Missing/unparseable `endYear` | falls back to `careerStage`, records `fallbackReason` |
+| No education section | `internship` via `career_stage_fallback` |
+| Multiple degrees | uses most recent; graduate flagged `studentStatus: graduated` |
+| No location | 52 queries still generated; geography `country` + `international_remote` |
+| Zero technical skills | 60 queries still generated |
+| Non-student professional | `internship`, flagged not-a-current-student, 0 intern-titled roles |
+| **All scoring fails** | `weak_profile`, `{attempted:8, succeeded:0, failed:8}`, cause named as provider errors — **not** "all scored low" |
+| Only junk (below floor) | 0 returned, `below_score_floor: 12`, nothing padded |
+| Fewer than 5 qualify | `weak_profile`, returns what qualified + reasons |
+| More than 10 qualify | exactly 10, best-ranked, `quota_status: full` |
+| All one geography | 10 returned, all `same_state`, widening used |
+| Duplicates across sources | deduped by the gate; one duplicate pair previously survived across tiers |
+| Aggregator/listing pages | **now excluded** at the gate and again at allocation |
+| Job server: oversized / wrong type / missing / unknown id / malformed id | 413 / 415 / 400 / 404 / 404, all with stable codes |
+| Job server: concurrent submissions | both accepted, queued, max concurrency 1 |
+| Job server: crash mid-run | `failed` + `PIPELINE_FAILED` |
+| Job server: stuck job | swept to `failed` + `PIPELINE_TIMEOUT` (**verified on a real job**) |
+| Scanned / empty / fake / long / non-English PDF | **NOT TESTED** |
+| Tavily zero results / only junk / all scrapes fail | **NOT TESTED** |
+| DB unreachable | **NOT TESTED** |
 
 ---
 
 ## 6. Still broken
 
-1. **Broaden-and-retry (Task 5) is not implemented.** Requires a cyclic n8n graph
-   (Allocator → broadened plan → Tavily → scrape → score); re-searching without
-   re-scraping is useless because scraping is per-item inside the loop. Could not
-   be verified without live runs and a broken cycle risks the whole pipeline.
-   **Consequence, plainly: removing padding (Task 4) without broadening means
-   thin profiles now return FEWER results than before.** Honest results with an
-   explanation — but fewer. This is a real user-visible regression in count.
-
-2. **363-second request against a 120-second global budget.** The `GLOBAL_TIMEOUT`
-   AbortController did not enforce. Root cause unknown. One occurrence in 55 calls.
-
-3. **Batch size 5 is untested against rate limits.** Task 1's gains came partly
-   from natural pacing. Five concurrent scoring calls may reintroduce throttling.
-   These two changes work against each other and were never tested together.
-
-4. **`missing_requirements` quality is poor.** In the real run, 14 of 14 distinct
-   entries appeared exactly once, and several were extraction artifacts ("job
-   description", "location", "workplace type" — the model listing missing *fields*,
-   not missing *skills*). I filter artifacts and require a gap in ≥2 postings, so
-   **in practice the captured run would produce zero reportable gaps.** The
-   weak-resume feature is structurally correct but starved of good input. The fix
-   is prompt work on `score_fit`, not more filtering.
-
-5. **`MIN_ALLOCATION_SCORE = 50` is a judgment call**, not a derived threshold. I
-   picked it; it is tunable in one place. It has never been validated against what
-   students actually find useful.
-
-6. **The pipeline's profile is not a CIP.** `Message a model` emits an ad-hoc
-   `{candidate, career_intelligence, search_profile}` shape with no validator. My
-   adapter converts it to a minimal CIP in-node — a second, thinner construction
-   path duplicating what `profile-builder` already does properly.
-
-7. **API key in cleartext in `workflows.json`**, which is tracked in git. It
-   predates this run (already in history); I preserved rather than introduced it.
-   **Recommend rotating it** and moving to `$env`. Not changed because n8n needs a
-   working value and rotation is yours.
-
-8. **execution-fabric (1,162 lines) remains unwired**, holding the provider
-   adapters (greenhouse/lever/ashby/web-render) that architecturally should own
-   provider selection.
+1. **Nothing since Phase A has run live.** Gate rewrite, broadening, key
+   rotation, `RESUME_INPUT_PATH` — all unexercised in n8n. Highest risk item.
+2. **The 5-minimum is not met.** Replayed against current code, real runs yield
+   **4, 4, 1, 1, 1**. Broadening should help but is unproven end-to-end.
+3. **Weak-resume gaps are effectively always empty.** The prompt rewrite got
+   exactly one clean live sample (`["Azure","ERP systems"]`, zero artifacts)
+   before quota died. Promising, not verified.
+4. **Extraction quality is poor.** `company` and `description` null ~50% of the
+   time; `title` is often a page title. `salary` and `deadline` null in 100% of
+   observed items.
+5. **Geographic targeting does not work.** `geographic_target_met: false` on
+   every run; most results `unresolved_location`.
+6. **`batchSize` cannot exceed 1** without a Merge node before the loop feedback.
+   No parallelism, so runtime stays 1–13 minutes.
+7. **The old gateway key is in git history.** Rotated in config, but history was
+   not rewritten (forbidden). Anyone with repo history has the old value — it is
+   dead, but treat the repo as having leaked a credential.
+8. **n8n runs one-shot CLI, not webhook mode.** Deferred deliberately.
+9. **`profile-builder` still not wired.** Kept, not dead.
+10. **A 363s call once overshot the 120s global timeout.** Never explained.
+11. **`execution-fabric` remains unwired** (1,162 lines).
 
 ---
 
 ## 7. Decisions made on your behalf
 
-1. **Dropped OpenRouter entirely.** 0/19 real success — pure added latency.
-   *Alternative:* keep as last resort. *Why not:* it never once succeeded.
-
-2. **Task 3 adapter instead of replacement.** The task says replace the inline
-   node with `/search-plan/build` and delete its logic. **That premise is wrong**,
-   verified five ways:
-   - `search_plans.candidate_id` is `NOT NULL REFERENCES candidates(id)`; a live
-     POST returns FK violation `23503`. The pipeline is stateless.
-   - The Tavily node needs `$json.query` (a string); search-planner returns
-     structured objects with no query string. Commit 5ebd6b9's "shaped for n8n"
-     claim is only half true.
-   - `Normalize + Classify` calls `$("Build Multi-Source Search Plan").all()` by
-     name and indexes it positionally for 11 fields search-planner doesn't supply.
-   - Profile schema mismatch (ad-hoc vs CIP v2.0.0).
-   - **Decisive:** the inline node does provider-*specific* discovery (9 source
-     families, 45 queries in your run); search-planner is deliberately
-     provider-*agnostic* with a passing test that fails if a provider name appears.
-     Deleting it would cut discovery to ~9 generic queries.
-
-   *Chosen:* search-planner owns the intelligence, the node keeps provider
-   expansion. Discovery breadth preserved at 45–60 queries.
-
-3. **Added `/search-plan/preview`** (stateless) rather than making the pipeline
-   write candidate rows to Postgres. Smaller and reversible.
-
-4. **profile-builder: WIRE IT IN, not delete.** Deleting would strand
-   search-planner, which requires CIP v2.0.0, and would enshrine an unvalidated
-   ad-hoc schema as the contract. profile-builder already produces a validated CIP
-   *and* persists the candidate row that `/search-plan/build` needs. **Not wired
-   during this run** — it changes the contract consumed by Resume Match Engine and
-   Geographic Allocator, putting Task 1's hard-won scoring stability at risk. It is
-   kept and should be wired as its own task.
-
-5. **Kept a genuine score of 0 as a valid low score** in Task 1 rather than
-   filtering it. Conflating "scored low" with "failed to score" is the exact bug
-   Task 1 exists to fix; excluding low scores is Task 4's floor.
-
-6. **`tier` stays geographic; widening moved to `allocation_reason`** (F6).
-   *Alternative:* add `"backfilled"` to the contract. *Why not:* it isn't a
-   geography, and mixing them is what broke the contract.
-
-7. **Untracked `node_modules` + run artifacts** without rewriting history.
-   Necessary: `pipeline_execution.json` is 81MB and regenerates every run.
+1. **Corrected Phase A's premise.** The brief assumed the constraint was
+   discovery breadth. Measured: runs already discover 160–181 specific postings;
+   the gate was discarding them while admitting listing pages. Fixed the gate
+   first, then built broadening on top.
+2. **Broadening as a second admission pass, not a cyclic graph.** A cycle would
+   re-enter the already-completed `splitInBatches` — the same mechanism that
+   forced `batchSize: 1`. Tradeoff: cannot surface a posting discovery never
+   found; it only stops us discarding ones we did find.
+3. **Enforced product rule 5 despite counts dropping to 1–4.** Returning listing
+   pages as opportunities is fabrication. Alternative (report 10 including junk)
+   rejected.
+4. **Reconciled on `gemini-flash-latest`, the alias.** A pinned model has been
+   retired under us twice.
+5. **Untracked `test_output.json`** rather than scrubbing it — it is a captured
+   run artifact like the others.
+6. **Stopped live calls when all three providers hit hard limits**, rather than
+   retrying or declaring anything verified.
 
 ---
 
-## 8. Recommended next steps, ordered
+## 8. Every test file modified, and why
 
-1. **Do one live pipeline run.** Nothing in tasks 3–6 is proven until this passes.
-   Expect wiring problems, not logic problems.
-2. **Rotate the leaked API key.**
-3. **Measure runtime** before/after batching, and watch for rate-limit failures
-   from batch size 5. If they reappear, lower to 3 or add pacing.
-4. **Fix `score_fit`'s `missing_requirements` prompt** so gaps are skills, not
-   schema fields. The weak-resume feature is worthless until this is done.
-5. **Implement broaden-and-retry** (Task 5's missing half) — most valuable once
-   padding is gone.
-6. **Wire profile-builder** so there is one validated profile schema.
-7. Then Task 7.
+**This run:**
 
----
+| File | Change | Why |
+|---|---|---|
+| `job-server/test/pipeline-runner.test.js` | **new** | Proves the process-group kill by spawning a real grandchild — showing it survives a direct-child kill, then that a group kill reclaims it |
+| `tools/verify-gate-specificity.js` | **new** | Gate admits postings, not listing pages; broadening is conditional |
+| `tools/verify-gap-quality.js` | pacing 1.5s → 11s; key from env | 11/12 calls failed — a pacing bug in the harness, derived from Groq's 12k tokens/min |
+| `tools/verify-scoring-payload.js` | key from env | Purging the dead credential |
 
-## 9. Task 7 readiness
+**Earlier in this session (already reported, repeated for completeness):**
+`ai-gateway/package.json` (test glob — `test-extract.js` was making live API
+calls on every `npm test`), `execution-fabric/test/{validator,integration,worker}.test.js`
+(stale string `location` fixtures, which unmasked a real crash bug),
+`profile-builder/test/profile-schema.test.js` (enum gained `unknown`
+deliberately), `tools/verify-task{1,4,5}.js` and `verify-edge-cases.js`
+(synthetic fixtures lacked apply URLs, so rule 5 correctly excluded them).
 
-**In place:** ai-gateway stable at ~1.8% failure; search-planner has a stateless
-endpoint; `data/` has candidates/search_plans tables, repositories, and
-migrations; the response shape is now well-defined by `Build Response`.
-
-**Missing:** no HTTP entry point (still one-shot `npx n8n execute`); no
-`pipeline_jobs` table or migration; n8n is not in webhook mode; no job/sweeper
-process; `API_CONTRACT.md` does not exist.
-
-**You'd need to decide:** whether `Build Response`'s shape becomes the locked
-contract; whether the job server calls n8n via webhook or replaces the
-orchestration; and whether profile-builder gets wired first (it should — the job
-server will want a persisted candidate anyway).
+**No test was weakened.** Where an expectation changed it was because behaviour
+became *stricter*, and in that case (`verify-task5`) I **added** a new
+`status: "ok"` case so the branch stayed covered.
 
 ---
 
-## Commits
+## 9. Integration readiness
 
-```
-ad18629  task-6: parallelize Loop Over Items (batch 5)
-3260341  task-5: weak-resume exit (PARTIAL — broaden-and-retry NOT implemented)
-b7d8ec4  task-4: score floor in the allocator + fix the tier contract (F5/F6)
-2b48538  task-3: drive the discovery node from search-planner (F2/F3 fixed)
-0e1202c  tools: fixture capture + offline replay harness
-d5cedb1  chore: untrack node_modules and pipeline run artifacts (F8)
-82a1e7b  task-2: year-based opportunity routing (+ task-3 groundwork)
-12c340a  task-1: make scoring failures visible and reduce failure rate
-```
-(plus a follow-up commit fixing the education-array bug and the edge-case harness)
+**No — not today.** `INTEGRATION_GUIDE.md` is written and accurate, and the
+contract is stable enough to code against. But:
 
-Nothing was pushed. History was not rewritten. No test was weakened to pass:
-the 7 pre-existing failures were fixed by correcting an invalid fixture that the
-canonical validator rejects, with every assertion preserved.
+- The service returns **1–4 opportunities**, not the promised 5–10.
+- **No configuration currently in the repo has been run live.** Phase A's
+  changes are unexercised in n8n.
+- Free-tier quota cannot sustain even a handful of runs per day. Groq's 100k
+  tokens/day is roughly **2–3 full runs**. This is a hard commercial blocker,
+  not an engineering one.
+
+**Minimum to become integration-ready:**
+1. One live run on the current code (proves nothing regressed)
+2. Paid API tier — everything else is downstream of this
+3. Criterion 1 proven live (`<5 → ≥5`)
+4. Phase B verified, or gaps removed from the contract
+
+A team *can* start building against `API_CONTRACT.md` now, provided they follow
+§7 of the integration guide and design for 1–4 results and empty gaps.
+
+---
+
+## 10. Limitations a student would actually hit
+
+1. **Usually fewer than 5 internships**, often 1.
+2. **Half the results show no company name** and no description — just a title and a link.
+3. **Never any salary or deadline.**
+4. **Some titles are page titles**, e.g. `"Rejolut is hiring Frontend Developer Intern | Cutshort"`.
+5. **No actionable feedback** when the list is short — gaps are empty.
+6. **5–15 minute wait**, sometimes longer.
+7. **Location targeting doesn't work** — most results aren't geographically resolved.
+8. **On a bad quota day the run fails outright** after several minutes of waiting.
