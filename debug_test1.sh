@@ -10,7 +10,7 @@ sleep 2
 
 curl -s -X POST http://localhost:4000/api/ai/chat \
   -H "Content-Type: application/json" \
-  -H "x-api-key: 7Kf92LmPqX4zR8NwLs5YbH3cUv9TxQa1" \
+  -H "x-api-key: ${GATEWAY_API_KEY}" \
   -d '{"task": "build_profile", "input": "{\"text\": \"Senior Node.js developer with 5 years experience.\"}"}' > ../out_debug.json
 cat ../out_debug.json
 echo ""

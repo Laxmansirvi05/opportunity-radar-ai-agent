@@ -26,7 +26,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const API_KEY = process.env.GATEWAY_API_KEY || '7Kf92LmPqX4zR8NwLs5YbH3cUv9TxQa1';
+const API_KEY = process.env.GATEWAY_API_KEY || process.env.GATEWAY_API_KEY;
 const URL = 'http://localhost:4000/api/ai/chat';
 const LIMIT = Number(process.argv[2] || 20);
 
@@ -73,6 +73,14 @@ function itemsOf(rd, name) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Pacing, derived rather than guessed: a score_fit call is roughly
+//   ~750 tokens of system prompt + ~400 candidate + ~400-800 opportunity
+//   ~= 2,000 tokens
+// against Groq's 12,000 tokens/minute, i.e. about 6 calls per minute. Firing
+// every 1.5s put all three providers into 429 simultaneously and produced
+// 11 failures out of 12 — a pacing bug in this harness, not exhausted quota.
+const CALL_SPACING_MS = Number(process.env.GAP_CALL_SPACING_MS || 11_000);
+
 (async () => {
   const d = loadRun('runD-final');
   const rd = d.data.resultData.runData;
@@ -103,8 +111,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         body: JSON.stringify({ task: 'score_fit', input: { candidate, opportunity: toScoringPayload(opp) } }),
       });
       body = await res.json();
-      if (!res.ok || body.success !== true) { failures += 1; process.stdout.write('x'); await sleep(1500); continue; }
-    } catch { failures += 1; process.stdout.write('x'); await sleep(1500); continue; }
+      if (!res.ok || body.success !== true) { failures += 1; process.stdout.write('x'); await sleep(CALL_SPACING_MS); continue; }
+    } catch { failures += 1; process.stdout.write('x'); await sleep(CALL_SPACING_MS); continue; }
 
     const gaps = body.data.missing_requirements || [];
     const arts = gaps.filter((g) => ARTIFACTS.has(String(g).trim().toLowerCase()));
@@ -112,7 +120,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     if (statesRequirements && gaps.length > 0) yieldedGap += 1;
     allGaps.push({ title: String(opp.title || '').slice(0, 40), gaps, artifacts: arts });
     process.stdout.write(arts.length ? 'A' : '.');
-    await sleep(1500);
+    await sleep(CALL_SPACING_MS);
   }
 
   console.log('\n');

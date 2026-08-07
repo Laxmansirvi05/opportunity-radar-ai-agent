@@ -17,7 +17,7 @@ sleep 4 # wait for them to start
 echo -e "\n=== 1. AI Gateway Direct Test ==="
 curl -s -X POST http://localhost:4000/api/ai/chat \
   -H "Content-Type: application/json" \
-  -H "x-api-key: 7Kf92LmPqX4zR8NwLs5YbH3cUv9TxQa1" \
+  -H "x-api-key: ${GATEWAY_API_KEY}" \
   -d '{"task": "build_profile", "input": "{\"text\": \"Senior Node.js developer with 5 years experience.\"}"}' > out1.json
 cat out1.json
 echo ""

@@ -8,7 +8,7 @@ sleep 5
 
 curl -s -X POST http://localhost:3000/fetch \
   -H "Content-Type: application/json" \
-  -H "x-api-key: 7Kf92LmPqX4zR8NwLs5YbH3cUv9TxQa1" \
+  -H "x-api-key: ${GATEWAY_API_KEY}" \
   -d '{"url": "https://example.com"}' > render-result.json
 
 cat render-result.json
@@ -26,13 +26,13 @@ sleep 3
 echo "Running exact curl from prompt..."
 curl -s -X POST http://localhost:4000/tasks/execute \
   -H "Content-Type: application/json" \
-  -H "x-api-key: 7Kf92LmPqX4zR8NwLs5YbH3cUv9TxQa1" \
+  -H "x-api-key: ${GATEWAY_API_KEY}" \
   -d '{"taskType": "cip_extraction", "payload": {"text": "Senior Node.js developer with 5 years experience."}}'
 
 echo -e "\n\nRunning properly formatted curl to trigger build_profile LLM task..."
 curl -s -X POST http://localhost:4000/api/ai/chat \
   -H "Content-Type: application/json" \
-  -H "x-api-key: 7Kf92LmPqX4zR8NwLs5YbH3cUv9TxQa1" \
+  -H "x-api-key: ${GATEWAY_API_KEY}" \
   -d '{
     "task": "build_profile",
     "input": "Senior Node.js developer with 5 years experience."

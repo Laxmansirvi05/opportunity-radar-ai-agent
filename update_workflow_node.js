@@ -17,7 +17,7 @@ if (msgNode) {
     sendHeaders: true,
     headerParameters: {
       parameters: [
-        { name: 'x-api-key', value: '7Kf92LmPqX4zR8NwLs5YbH3cUv9TxQa1' }
+        { name: 'x-api-key', value: process.env.GATEWAY_API_KEY }
       ]
     },
     sendBody: true,

@@ -42,3 +42,4 @@ fixtures/
 live-runs/
 test-resumes/
 job-server/node_modules/
+test_output.json

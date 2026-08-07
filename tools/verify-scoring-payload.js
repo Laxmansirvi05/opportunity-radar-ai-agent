@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 const dir = process.argv[2] || 'live-runs/run5-batch5-seq';
-const API_KEY = '7Kf92LmPqX4zR8NwLs5YbH3cUv9TxQa1';
+const API_KEY = process.env.GATEWAY_API_KEY;
 const URL = 'http://localhost:4000/api/ai/chat';
 
 const MAX_DESCRIPTION_CHARS = 4000;

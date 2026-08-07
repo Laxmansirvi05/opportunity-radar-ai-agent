@@ -10,7 +10,7 @@ try {
     url: 'http://localhost:4000/api/ai/chat',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': '7Kf92LmPqX4zR8NwLs5YbH3cUv9TxQa1'
+      'x-api-key': process.env.GATEWAY_API_KEY
     },
     body: {
       task: 'score_fit',
