@@ -32,38 +32,26 @@ test('branch 1: a 2nd-year student far from graduating still routes to internshi
 // Branch 2 — endYear is this year or next → job, internships as fallback
 // ---------------------------------------------------------------------------
 
-test('branch 2: graduating this year routes to job with internship fallback', () => {
+// ---------------------------------------------------------------------------
+// Student-status guard — everyone gets internships; the year only classifies
+// whether the candidate is still a student.
+// ---------------------------------------------------------------------------
+
+test('graduating this year is still a current student and gets internships', () => {
   const t = deriveOpportunityTarget({ education: [{ endYear: NOW }], careerStage: 'student', currentYear: NOW });
-  assert.equal(t.primary, 'job');
-  assert.deepEqual([...t.fallback], ['internship']);
-  assert.equal(t.source, 'education_end_year');
+  assert.equal(t.primary, 'internship');
+  assert.equal(t.studentStatus, 'student');
+  assert.equal(t.isCurrentStudent, true);
   assert.equal(t.yearsUntilGraduation, 0);
 });
 
-test('branch 2: graduating next year routes to job with internship fallback', () => {
-  const t = deriveOpportunityTarget({ education: [{ endYear: 2027 }], careerStage: 'student', currentYear: NOW });
-  assert.equal(t.primary, 'job');
-  assert.deepEqual([...t.fallback], ['internship']);
-  assert.equal(t.yearsUntilGraduation, 1);
-});
-
-test('branch 2: final-year student is NOT routed to internships despite careerStage student', () => {
-  // This is the exact bug F3 describes: careerStage alone would say "internship".
-  const t = deriveOpportunityTarget({ education: [{ endYear: NOW }], careerStage: 'student', currentYear: NOW });
-  assert.notEqual(t.primary, 'internship');
-  assert.equal(t.primary, 'job');
-});
-
-// ---------------------------------------------------------------------------
-// Branch 3 — endYear in the past → job only
-// ---------------------------------------------------------------------------
-
-test('branch 3: already graduated routes to job with no internship fallback', () => {
+test('already graduated is flagged as not a current student but still gets internships', () => {
   const t = deriveOpportunityTarget({ education: [{ endYear: 2024 }], careerStage: 'student', currentYear: NOW });
-  assert.equal(t.primary, 'job');
-  assert.deepEqual([...t.fallback], []);
-  assert.equal(t.source, 'education_end_year');
+  assert.equal(t.primary, 'internship');
+  assert.equal(t.studentStatus, 'graduated');
+  assert.equal(t.isCurrentStudent, false);
   assert.equal(t.yearsUntilGraduation, -2);
+  assert.match(t.fallbackReason, /not a current student/);
 });
 
 // ---------------------------------------------------------------------------
@@ -104,24 +92,26 @@ test('branch 4: implausible endYear is rejected rather than trusted', () => {
   // A typo like 22027 must not silently route the candidate to internships forever.
   const t = deriveOpportunityTarget({ education: [{ endYear: 22027 }], careerStage: 'senior', currentYear: NOW });
   assert.equal(t.source, 'career_stage_fallback');
-  assert.equal(t.primary, 'job');
+  assert.equal(t.primary, 'internship');
+  assert.equal(t.studentStatus, 'unknown');
 });
 
 // ---------------------------------------------------------------------------
-// Branch 5 — careerStage fallback maps non-students to job
+// careerStage fallback — non-student values must still behave sanely
 // ---------------------------------------------------------------------------
 
-test('branch 5: non-student careerStage falls back to job', () => {
+test('non-student careerStage still yields internships but is not marked a student', () => {
   for (const stage of ['early-career', 'mid-career', 'senior', 'transitioning']) {
     const t = deriveOpportunityTarget({ education: [], careerStage: stage, currentYear: NOW });
-    assert.equal(t.primary, 'job', `careerStage ${stage} should route to job`);
+    assert.equal(t.primary, 'internship', `careerStage ${stage} should still yield internships`);
     assert.equal(t.source, 'career_stage_fallback');
+    assert.equal(t.isCurrentStudent, false, `careerStage ${stage} is not a current student`);
   }
 });
 
-test('branch 5: entirely absent careerStage still yields a usable target', () => {
+test('entirely absent careerStage still yields a usable target', () => {
   const t = deriveOpportunityTarget({ currentYear: NOW });
-  assert.equal(t.primary, 'job');
+  assert.equal(t.primary, 'internship');
   assert.equal(t.source, 'career_stage_fallback');
   assert.match(t.fallbackReason, /unknown/);
 });

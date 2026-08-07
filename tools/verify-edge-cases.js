@@ -24,6 +24,9 @@ function plannerStub() {
       opportunityType: components.opportunityTarget.primary,
       opportunityTypeFallback: components.opportunityTarget.fallback,
       opportunityTypeSource: components.opportunityTarget.source,
+      opportunityTypeFallbackReason: components.opportunityTarget.fallbackReason,
+      studentStatus: components.opportunityTarget.studentStatus,
+      isCurrentStudent: components.opportunityTarget.isCurrentStudent,
       graduationYear: components.opportunityTarget.endYear,
       careerStage: components.careerStage, titleVariants: components.titleVariants,
       skills: components.skills, exclusions: components.exclusions,
@@ -64,19 +67,21 @@ function synth(n, score, extra = {}) {
   const candidate = loadFixture('candidate');
 
   // ---------------- Year routing ----------------
-  for (const [label, year, stage, expect] of [
-    ['2nd-year student', CY + 3, 'student', 'internship'],
-    ['final-year student', CY + 1, 'student', 'job'],
-    ['graduated (past endYear)', CY - 2, 'early-career', 'job'],
+  for (const [label, year, stage, expectStatus] of [
+    ['2nd-year student', CY + 3, 'student', 'student'],
+    ['final-year student', CY + 1, 'student', 'student'],
+    ['graduated (past endYear)', CY - 2, 'early-career', 'graduated'],
   ]) {
     const t = deriveOpportunityTarget({ education: [{ endYear: year }], careerStage: stage, currentYear: CY });
-    record('year routing', label, `-> ${t.primary} (source ${t.source})`, t.primary === expect);
+    record('student-status guard', label,
+      `-> ${t.primary}, studentStatus ${t.studentStatus} (source ${t.source})`,
+      t.primary === 'internship' && t.studentStatus === expectStatus);
   }
   {
     const t = deriveOpportunityTarget({ education: [{ endYear: 'not a year' }], careerStage: 'student', currentYear: CY });
-    record('year routing', 'missing/unparseable endYear',
+    record('student-status guard', 'missing/unparseable endYear',
       `-> ${t.primary}, source "${t.source}", fallback recorded: ${!!t.fallbackReason}`,
-      t.source === 'career_stage_fallback' && !!t.fallbackReason);
+      t.primary === 'internship' && t.source === 'career_stage_fallback' && !!t.fallbackReason);
   }
 
   // ---------------- Resume inputs ----------------
@@ -117,7 +122,7 @@ function synth(n, score, extra = {}) {
     ];
     const out = await planFor(p);
     record('resume input', 'multiple degrees (array form)',
-      `-> opportunity_type ${out[0].opportunity_type}, gradYear ${out[0].graduation_year}, source ${out[0].opportunity_type_source}`,
+      `-> gradYear ${out[0].graduation_year}, source ${out[0].opportunity_type_source}, student_status ${out[0].student_status}`,
       out[0].graduation_year === CY + 2 && out[0].opportunity_type_source === 'education_end_year');
 
     // Graduate whose earlier degree is older — must not fall back to internships.
@@ -129,8 +134,9 @@ function synth(n, score, extra = {}) {
     g.candidate.experience_level = 'early_career';
     const gOut = await planFor(g);
     record('resume input', 'graduate with multiple degrees',
-      `-> opportunity_type ${gOut[0].opportunity_type}, gradYear ${gOut[0].graduation_year}`,
-      gOut[0].opportunity_type === 'job' && gOut[0].graduation_year === CY - 1);
+      `-> ${gOut[0].opportunity_type}, gradYear ${gOut[0].graduation_year}, student_status ${gOut[0].student_status}`,
+      gOut[0].opportunity_type === 'internship' && gOut[0].graduation_year === CY - 1
+      && gOut[0].student_status === 'graduated');
   }
   {
     const t = deriveOpportunityTarget({
@@ -147,8 +153,8 @@ function synth(n, score, extra = {}) {
     const out = await planFor(p);
     const internish = out.filter((q) => /intern/i.test(q.query)).length;
     record('resume input', 'experienced professional, not a student',
-      `-> opportunity_type ${out[0].opportunity_type}, ${internish} queries mention intern`,
-      out[0].opportunity_type === 'job' && internish === 0);
+      `-> ${out[0].opportunity_type}, student_status ${out[0].student_status}, ${internish} queries mention intern`,
+      out[0].opportunity_type === 'internship' && out[0].student_status !== 'student');
   }
 
   // ---------------- Pipeline conditions ----------------

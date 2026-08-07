@@ -114,8 +114,11 @@ test("loads a complete production configuration", () => {
     GEMINI_API_KEY: "gemini-secret",
     GROQ_API_KEY: "groq-secret"
   });
-  assert.equal(config.globalTimeoutMs, 75_000);
-  assert.equal(config.providerTimeoutMs, 25_000);
+  // Timeouts were deliberately raised (walkthrough.md: PROVIDER_TIMEOUT_MS 25s -> 60s,
+  // to let slower free-tier fallback models finish); this expectation was never
+  // updated and had been failing against config.js since that change.
+  assert.equal(config.globalTimeoutMs, 120_000);
+  assert.equal(config.providerTimeoutMs, 60_000);
   assert.equal(config.maxRetries, 2);
 });
 
@@ -123,7 +126,10 @@ test("extract_opportunity rejects Markdown and validates only the predefined sch
   const opportunity = {
     title: "Software Engineering Intern",
     company: "Example Co",
-    location: "Bengaluru, India",
+    // Structured location. Both the schema (opportunity-schema.js validateLocation)
+    // and the task prompt require an object with exactly city/state/country; this
+    // fixture still carried the superseded flat-string form.
+    location: { city: "Bengaluru", state: "Karnataka", country: "India" },
     workplaceType: "hybrid",
     employmentType: "internship",
     description: "Build product features.",

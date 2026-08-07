@@ -3,18 +3,20 @@
 /**
  * opportunity-type.js
  *
- * Derives the opportunity-type target (internship vs job) from the candidate's
- * education end year.
+ * The product serves current students seeking INTERNSHIPS. Every candidate gets
+ * internship results; this module no longer chooses between internship and job.
  *
- * This exists because `careerStage` cannot express the year rule: a 2nd-year and
- * a final-year student are both "student", so routing on careerStage alone sends
- * graduating students to internships. This module is the separate signal; it does
- * NOT overload or replace careerStage, which still drives seniority filtering.
+ * The education end year is still extracted, but it is now a GUARD rather than a
+ * router: it detects when a candidate does not look like a current student and
+ * records that in the output, so the caller can surface it honestly instead of
+ * silently treating a graduate as a student.
  *
- * DETERMINISTIC — same inputs and same currentYear always produce the same target.
+ * DETERMINISTIC — same inputs and same currentYear always produce the same result.
  */
 
 const INTERNSHIP = 'internship';
+
+// Retained for callers that still map careerStage values; nothing routes to it.
 const JOB = 'job';
 
 // Sanity bounds for a parsed graduation year; anything outside is treated as
@@ -66,17 +68,18 @@ function mostRecentEndYear(education, currentYear) {
 }
 
 /**
- * Derive the opportunity-type target for a candidate.
+ * Derive the opportunity target for a candidate.
  *
- * Routing rules (relative to currentYear):
- *   endYear >= currentYear + 2      → internship          (still has years of study left)
- *   endYear is currentYear or +1    → job, internship fallback  (graduating now/soon)
- *   endYear <  currentYear          → job only            (already graduated)
- *   no parseable endYear            → fall back to careerStage, and record that it fired
+ * Always internship — that is the product. The end year is used only to classify
+ * student status so a non-student can be flagged rather than silently served:
+ *
+ *   endYear >= currentYear      → current student
+ *   endYear <  currentYear      → already graduated  (studentStatus 'graduated')
+ *   no parseable endYear        → unknown, resolved from careerStage and recorded
  *
  * @param {object} params
  * @param {Array} [params.education]     — CIP literal.education entries
- * @param {string} [params.careerStage]  — CIP inferred.careerStage.value (fallback only)
+ * @param {string} [params.careerStage]  — CIP inferred.careerStage.value
  * @param {number} [params.currentYear]  — injectable for deterministic tests
  * @returns {Readonly<{
  *   primary: string,
@@ -84,6 +87,8 @@ function mostRecentEndYear(education, currentYear) {
  *   source: string,
  *   endYear: number|null,
  *   yearsUntilGraduation: number|null,
+ *   studentStatus: string,
+ *   isCurrentStudent: boolean,
  *   fallbackReason: string|null
  * }>}
  */
@@ -91,49 +96,36 @@ function deriveOpportunityTarget({ education, careerStage, currentYear = new Dat
   const endYear = mostRecentEndYear(education, currentYear);
 
   if (endYear === null) {
+    // careerStage still has to behave sanely for non-student values, so it
+    // decides the student flag when the year is missing.
     const stage = typeof careerStage === 'string' ? careerStage.toLowerCase() : '';
-    const primary = stage === 'student' ? INTERNSHIP : JOB;
+    const looksStudent = stage === 'student';
     return Object.freeze({
-      primary,
+      primary: INTERNSHIP,
       fallback: Object.freeze([]),
       source: 'career_stage_fallback',
       endYear: null,
       yearsUntilGraduation: null,
-      fallbackReason: `no parseable education endYear; routed from careerStage "${careerStage || 'unknown'}"`,
+      studentStatus: looksStudent ? 'student' : 'unknown',
+      isCurrentStudent: looksStudent,
+      fallbackReason: `no parseable education endYear; student status inferred from careerStage "${careerStage || 'unknown'}"`,
     });
   }
 
   const yearsUntilGraduation = endYear - currentYear;
-
-  if (yearsUntilGraduation >= 2) {
-    return Object.freeze({
-      primary: INTERNSHIP,
-      fallback: Object.freeze([]),
-      source: 'education_end_year',
-      endYear,
-      yearsUntilGraduation,
-      fallbackReason: null,
-    });
-  }
-
-  if (yearsUntilGraduation >= 0) {
-    return Object.freeze({
-      primary: JOB,
-      fallback: Object.freeze([INTERNSHIP]),
-      source: 'education_end_year',
-      endYear,
-      yearsUntilGraduation,
-      fallbackReason: null,
-    });
-  }
+  const graduated = yearsUntilGraduation < 0;
 
   return Object.freeze({
-    primary: JOB,
+    primary: INTERNSHIP,
     fallback: Object.freeze([]),
     source: 'education_end_year',
     endYear,
     yearsUntilGraduation,
-    fallbackReason: null,
+    studentStatus: graduated ? 'graduated' : 'student',
+    isCurrentStudent: !graduated,
+    fallbackReason: graduated
+      ? `education ended ${Math.abs(yearsUntilGraduation)} year(s) ago; candidate is not a current student but is still served internships`
+      : null,
   });
 }
 

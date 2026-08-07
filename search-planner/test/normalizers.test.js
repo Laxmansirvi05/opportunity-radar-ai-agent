@@ -73,13 +73,23 @@ test('expandTitleForStage: opportunityType overrides careerStage for titles', ()
   assert.ok(internVariants.every((v) => /intern/i.test(v)), 'internship target expects Intern titles');
 });
 
-test('expandTitleForStage: early-career → includes bare title and prefixed variants', () => {
-  const variants = expandTitleForStage('Backend Engineer', 'early-career');
+test('expandTitleForStage: retained entry-level branch still works when explicitly requested', () => {
+  // The product is internships-only, so this branch is no longer reached by
+  // default — every candidate now gets intern titles. The code is retained so
+  // non-student careerStage values stay sane, and this pins its behaviour.
+  const variants = expandTitleForStage('Backend Engineer', 'early-career', 'job');
   // ENTRY_SUFFIXES = ['', 'Junior', 'Entry Level', 'New Grad']
-  // Empty suffix produces the bare title; others produce prefixed forms.
   assert.ok(variants.includes('Backend Engineer'),            'bare title expected');
   assert.ok(variants.some((v) => v.includes('Junior')),       'Junior variant expected');
   assert.ok(variants.some((v) => v.includes('Entry Level')),  'Entry Level variant expected');
+});
+
+test('expandTitleForStage: defaults to intern titles for every career stage', () => {
+  for (const stage of ['student', 'early-career', 'mid-career', 'senior', undefined]) {
+    const variants = expandTitleForStage('Backend Engineer', stage);
+    assert.ok(variants.every((v) => /intern/i.test(v)),
+      `careerStage ${stage} should default to intern titles, got ${JSON.stringify(variants)}`);
+  }
 });
 
 test('stripStageQualifiers: removes leading and trailing stage words', () => {

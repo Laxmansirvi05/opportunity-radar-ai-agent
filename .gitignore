@@ -39,3 +39,5 @@ test_sh_output.txt
 
 # Replay fixtures captured from real runs
 fixtures/
+live-runs/
+test-resumes/

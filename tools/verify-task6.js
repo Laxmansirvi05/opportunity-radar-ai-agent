@@ -49,22 +49,51 @@ function runPerItem(nodeName, itemJson, extraNodes = {}) {
   }));
 }
 
+/** Execute a runOnceForAllItems node against a batch of items. */
+function runAllItems(nodeName, itemsJson, extraNodes = {}) {
+  const code = byName[nodeName].parameters.jsCode;
+  const items = itemsJson.map((json) => ({ json }));
+  const $ = (name) => {
+    const xs = (extraNodes[name] || []).map((json) => ({ json }));
+    return { all: () => xs, first: () => xs[0], last: () => xs[xs.length - 1] };
+  };
+  const sandbox = {
+    $json: items[0] && items[0].json,
+    $input: { all: () => items, first: () => items[0], last: () => items[items.length - 1] },
+    $,
+    console: { log() {}, warn() {}, error() {} },
+    JSON, Date, Math, Set, Map, URL, Array, Object, String, Number, Boolean,
+    RegExp, isNaN, parseInt, parseFloat, encodeURIComponent, decodeURIComponent, Promise,
+  };
+  const fn = vm.runInContext(`(async function () {\n${code}\n})`, vm.createContext(sandbox), {
+    filename: `${nodeName}.js`,
+  });
+  return Promise.resolve(fn.call({
+    helpers: { httpRequest: async () => { throw new Error('network blocked in verification'); } },
+  }));
+}
+
 (async () => {
-  console.log('=== TASK 6: per-item conversion correctness ===');
-  console.log('(batching without this would drop 4 of every 5 opportunities)\n');
+  console.log('=== TASK 6: loop node correctness ===');
+  console.log('(per-item conversion + batchSize guard)\n');
 
   // Every converted node must be in per-item mode.
+  // Resume Match Engine is deliberately NOT per-item: it needs
+  // $('Code in JavaScript').first(), which n8n forbids in per-item mode.
   const converted = [
     'Clean HTML', 'Extract Main Content.', 'guard node', 'JSON Parse',
-    'Parse + Rank Opportunities', 'Standardize Opportunity', 'Resume Match Engine',
+    'Parse + Rank Opportunities', 'Standardize Opportunity',
   ];
   for (const name of converted) {
     assert.equal(byName[name].parameters.mode, 'runOnceForEachItem', `${name} not converted`);
   }
   console.log(`  PASS  all ${converted.length} in-loop nodes are runOnceForEachItem`);
 
-  assert.equal(byName['Loop Over Items'].parameters.batchSize, 5);
-  console.log('  PASS  Loop Over Items batchSize = 5');
+  // batchSize is 1 by necessity: the If node's branches reconverge and feed back
+  // into the loop separately, so a batch spanning both branches makes the
+  // done-branch fire repeatedly and emit partial results. Measured live.
+  assert.equal(byName['Loop Over Items'].parameters.batchSize, 1);
+  console.log('  PASS  Loop Over Items batchSize = 1 (batching proven incorrect for this topology)');
 
   // No converted node may still return a top-level array — in per-item mode
   // that is the shape that silently discards data.
@@ -88,21 +117,20 @@ function runPerItem(nodeName, itemJson, extraNodes = {}) {
   const parseRankOut = loadFixture('quality-gated'); // upstream shape available
   console.log(`  Standardize Opportunity: captured ${standardizedCaptured.length} outputs`);
 
-  // Resume Match Engine: verify it emits exactly one item per input item and
-  // preserves the task-1 failure contract.
-  const stdItems = standardizedCaptured;
-  let emitted = 0;
-  for (const item of stdItems.slice(0, 5)) {
-    const out = await runPerItem('Resume Match Engine', item, {
-      'Code in JavaScript': loadFixture('candidate'),
-    }).catch(() => null);
+  // Resume Match Engine runs in all-items mode over the whole batch. Verify it
+  // emits one item per input item and preserves the task-1 failure contract.
+  const stdItems = standardizedCaptured.slice(0, 5);
+  const rmeOut = await runAllItems('Resume Match Engine', stdItems, {
+    'Code in JavaScript': loadFixture('candidate'),
+  });
+  assert.equal(rmeOut.length, stdItems.length,
+    `Resume Match Engine must emit one item per input (${stdItems.length} in, ${rmeOut.length} out)`);
+  for (const o of rmeOut) {
     // Network is blocked, so the node takes its documented failure path.
-    assert.ok(out && out.json, 'Resume Match Engine must return a single {json} item');
-    assert.equal(out.json.scoring_status, 'failed', 'blocked network must mark the item failed');
-    assert.equal(out.json.score, null, 'failed score must be null, never 0');
-    emitted += 1;
+    assert.equal(o.json.scoring_status, 'failed', 'blocked network must mark the item failed');
+    assert.equal(o.json.score, null, 'failed score must be null, never 0');
   }
-  console.log(`  PASS  Resume Match Engine: ${emitted}/5 items each returned exactly one {json} item`);
+  console.log(`  PASS  Resume Match Engine: ${stdItems.length} in -> ${rmeOut.length} out, none dropped`);
   console.log('        and preserved the task-1 contract (score null + scoring_status failed)');
 
   // Clean HTML over real captured html-bearing items.
@@ -121,7 +149,5 @@ function runPerItem(nodeName, itemJson, extraNodes = {}) {
   assert.ok(jp && jp.json, 'JSON Parse must return a single {json} item');
   console.log('  PASS  JSON Parse returns a single {json} item');
 
-  console.log('\nALL TASK-6 CONVERSION ASSERTIONS PASSED (0 network calls)');
-  console.log('\nNOTE: wall-clock speedup is NOT measured here — that requires a live');
-  console.log('      pipeline run. Correctness of the conversion is what is proven above.');
+  console.log('\nALL TASK-6 ASSERTIONS PASSED (0 network calls)');
 })().catch((e) => { console.error('\nFAILED:', e.message); process.exit(1); });

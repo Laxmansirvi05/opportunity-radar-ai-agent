@@ -161,12 +161,9 @@ function expandTitleForStage(title, careerStage, opportunityType) {
   // candidate keeps an "Intern" title that no longer applies to them.
   const baseTitle = stripStageQualifiers(title);
 
-  // Opportunity type wins when supplied: a final-year student is careerStage
-  // "student" but is searching for jobs, so must not get "X Intern" titles.
-  // When omitted, fall back to career-stage behaviour.
-  const wantsInternship = opportunityType
-    ? opportunityType === 'internship'
-    : INTERN_STAGES.has(stage);
+  // Internships only. careerStage/opportunityType are still accepted so callers
+  // and non-student values keep working, but every candidate gets intern titles.
+  const wantsInternship = opportunityType ? opportunityType === 'internship' : true;
 
   if (wantsInternship) {
     // internship target → intern/internship suffixes

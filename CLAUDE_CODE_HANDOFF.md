@@ -14,7 +14,7 @@ Hard rules:
 1. **Resume is the only input.** Any path requiring the user to supply a role, keyword, or location is a design violation.
 2. **5 minimum, 10 maximum. Never pad.** Geographic skew target ~7 same-state / 1–2 same-country / 1–2 international, but counted honestly — fewer is better than padded.
 3. **Weak-resume path.** If fewer than 5 qualify after broadening, return an honest short list plus specific, actionable gaps.
-4. **Opportunity type follows academic year** — 2nd/3rd year → internships; final year / graduated → jobs. (See Task 2: currently unimplementable as written.)
+4. **Internships only.** The product serves current students seeking internships. Every candidate receives internship results; there is no job/full-time path. The education `endYear` is still extracted, but only as a **guard**: it classifies the candidate as `student` / `graduated` / `unknown` and records that in the output so a non-student can be surfaced honestly rather than silently treated as a student. It no longer selects between opportunity types. *(Scope change, 2026-08-07 — supersedes the earlier year-routing rule.)*
 5. **Every apply URL points to a specific live posting** — not a search page, careers homepage, or aggregator listing.
 6. **No hallucinated fields.** Salary, hours, deadline, location must be `null` when not explicitly stated. A wrong salary shown to a student is a trust violation.
 7. **End goal:** an internal service the Opportunity Radar backend calls. Service-to-service, no public CORS.
@@ -78,7 +78,7 @@ const stageKeyword = careerStage === 'student'      ? 'internship'
 
 This is why every candidate gets internship results regardless of seniority.
 
-### F3 — `careerStage` cannot express the year rule
+### F3 — `careerStage` granularity gap (NOW MOOT — internships only)
 
 `careerStage` (`ai-gateway/src/tasks/build-profile.js:70`) allows only:
 
@@ -89,6 +89,14 @@ This is why every candidate gets internship results regardless of seniority.
 A 2nd-year and a final-year student are **both** `"student"`, and `student → internship`. **So even after wiring search-planner in, final-year students still get internships.**
 
 The data needed already exists: `build-profile.js:57` extracts `literal.education[].endYear`.
+
+> **Moot as of the 2026-08-07 scope change.** The granularity gap described below
+> only mattered because `careerStage` had to choose between internships and jobs.
+> The product is now internships-only, so a 2nd-year and a final-year student
+> being both `"student"` no longer causes a wrong routing decision — both
+> correctly receive internships. The `endYear` extraction built for this is
+> retained as a student-status guard (see product rule 4), and `careerStage`
+> still drives seniority-qualifier stripping. Nothing here needs fixing.
 
 ### F4 — 30–58% of scoring calls fail per run, and it poisons everything downstream
 

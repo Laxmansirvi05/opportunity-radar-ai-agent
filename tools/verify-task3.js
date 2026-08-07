@@ -28,6 +28,9 @@ function plannerStub() {
       opportunityType:         components.opportunityTarget.primary,
       opportunityTypeFallback: components.opportunityTarget.fallback,
       opportunityTypeSource:   components.opportunityTarget.source,
+      opportunityTypeFallbackReason: components.opportunityTarget.fallbackReason,
+      studentStatus:           components.opportunityTarget.studentStatus,
+      isCurrentStudent:        components.opportunityTarget.isCurrentStudent,
       graduationYear:          components.opportunityTarget.endYear,
       careerStage:             components.careerStage,
       titleVariants:           components.titleVariants,
@@ -63,12 +66,17 @@ function report(label, queries) {
   console.log(`\n--- ${label} ---`);
   console.log(`  queries generated   : ${queries.length}`);
   console.log(`  opportunity_type    : ${queries[0].opportunity_type}  (source: ${queries[0].opportunity_type_source}, gradYear: ${queries[0].graduation_year})`);
+  console.log(`  student_status      : ${queries[0].student_status}  (is_current_student: ${queries[0].is_current_student})`);
   console.log(`  target_roles        : ${JSON.stringify(roles)}`);
   console.log(`  queries mentioning "intern": ${internQ}`);
   console.log(`  source families     : ${JSON.stringify([...new Set(queries.map((q) => q.source_family))])}`);
   console.log(`  sample queries      :`);
   for (const q of queries.slice(0, 3)) console.log(`      ${q.query}`);
-  return { count: queries.length, internQ, roles };
+  return {
+    count: queries.length, internQ, roles,
+    studentStatus: queries[0].student_status,
+    isCurrentStudent: queries[0].is_current_student,
+  };
 }
 
 (async () => {
@@ -87,21 +95,21 @@ function report(label, queries) {
 
   console.log('\n=== ASSERTIONS ===');
 
-  assert.equal(second.roles.every((r) => /intern/i.test(r)), true,
-    '2nd-year student roles should all be intern-oriented');
-  console.log('  PASS  2nd-year student -> internship roles');
+  // Internships only: every candidate gets intern-oriented roles and queries.
+  for (const [label, r] of [['2nd-year', second], ['final-year', finalYr], ['graduate', grad]]) {
+    assert.equal(r.roles.every((x) => /intern/i.test(x)), true,
+      `${label} roles should all be intern-oriented, got ${JSON.stringify(r.roles)}`);
+    assert.ok(r.internQ > 0, `${label} queries should mention internship`);
+  }
+  console.log('  PASS  all three candidates -> internship roles and internship queries');
 
-  assert.equal(finalYr.roles.some((r) => /intern/i.test(r)), false,
-    'final-year student must NOT get intern roles');
-  console.log('  PASS  final-year student -> job roles, no "Intern" titles (F3 fixed in pipeline)');
-
-  assert.equal(grad.roles.some((r) => /intern/i.test(r)), false,
-    'graduate must NOT get intern roles');
-  console.log('  PASS  graduate -> job roles');
-
-  assert.ok(second.internQ > 0, '2nd-year queries should mention internship');
-  assert.equal(finalYr.internQ, 0, 'final-year queries must not mention internship');
-  console.log('  PASS  query text follows opportunity type (F2 fixed: no hardcoded "Intern")');
+  // The year is now a guard, not a router: a graduate is still served
+  // internships but must be flagged as not a current student.
+  assert.equal(second.studentStatus, 'student', '2nd-year should be a current student');
+  assert.equal(finalYr.studentStatus, 'student', 'final-year should still be a current student');
+  assert.equal(grad.studentStatus, 'graduated', 'graduate should be flagged as graduated');
+  assert.equal(grad.isCurrentStudent, false, 'graduate must not be marked a current student');
+  console.log('  PASS  student-status guard: student / student / graduated (flagged, still served)');
 
   // Discovery breadth must not regress — this is why the node was not deleted.
   for (const [label, r] of [['2nd-year', second], ['final-year', finalYr], ['graduate', grad]]) {

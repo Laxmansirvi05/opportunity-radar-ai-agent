@@ -223,6 +223,8 @@ function composeSearchPlan({ cip, candidateId = null }) {
       opportunityType:       components.opportunityTarget.primary,
       opportunityTypeFallback: components.opportunityTarget.fallback,
       opportunityTypeSource: components.opportunityTarget.source,
+      studentStatus:         components.opportunityTarget.studentStatus,
+      isCurrentStudent:      components.opportunityTarget.isCurrentStudent,
       graduationYear:        components.opportunityTarget.endYear,
       generationDurationMs:  Date.now() - startedAt,
     },
