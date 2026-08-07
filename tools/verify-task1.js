@@ -73,7 +73,9 @@ function summarize(label, allocated) {
     input: newFinalized,
     nodes: { 'Code in JavaScript': candidate },
   });
-  const after = summarize('AFTER fix (current workflow code)', newAllocated);
+  const isCarrier = newAllocated.length === 1 && Array.isArray(newAllocated[0].opportunities);
+  const allocatedItems = isCarrier ? [] : newAllocated;
+  const after = summarize('AFTER fix (current workflow code)', allocatedItems);
 
   console.log('\n=== ASSERTIONS ===');
   const assert = require('assert');
@@ -102,19 +104,24 @@ function summarize(label, allocated) {
   const floor = newAllocated[0]?.allocation_summary?.min_score ?? 0;
   const aboveFloor = newFinalized.filter((o) => o.score >= floor).length;
   assert.ok(
-    newAllocated.length <= Math.min(10, aboveFloor),
+    allocatedItems.length <= Math.min(10, aboveFloor),
     'allocation must not pad beyond the genuinely-scored, above-floor set'
   );
   assert.ok(
-    newAllocated.length <= summary.succeeded,
+    allocatedItems.length <= summary.succeeded,
     'allocation can never exceed the number of successful scores'
   );
-  console.log(`  PASS  allocated ${newAllocated.length} from ${summary.succeeded} genuinely scored (no padding with failures)`);
+  console.log(`  PASS  allocated ${allocatedItems.length} from ${summary.succeeded} genuinely scored (no padding with failures)`);
 
   // Distinguishing "scored low" from "failed to score" is the whole point.
   const genuineLow = newFinalized.filter((o) => o.scoring_status === 'scored' && o.score === 0);
   console.log(`\n  NOTE  ${genuineLow.length} item(s) carry a genuine LLM score of 0 — retained by task-1 as`);
   console.log(`        "scored low" (not a failure), then excluded by task-4's floor of ${floor}.`);
+  const alloc = newAllocated[0]?.allocation_summary;
+  if (alloc) {
+    console.log(`  NOTE  product rule 5 then excluded ${alloc.excluded_no_apply_url} item(s) with no apply URL`);
+    console.log(`        and ${alloc.excluded_aggregator_page} aggregator page(s), leaving ${alloc.returned}.`);
+  }
 
   console.log('\nALL TASK-1 FIXTURE ASSERTIONS PASSED (0 network calls)');
 })().catch((e) => { console.error('\nFAILED:', e.message); process.exit(1); });

@@ -1,0 +1,154 @@
+{
+  "status": "weak_profile",
+  "opportunity_count": 4,
+  "opportunities": [
+    {
+      "title": "Rejolut is hiring Frontend Developer Intern job in Mumbai (Remote friendly) | Cutshort",
+      "company": null,
+      "description": null,
+      "location": {
+        "city": null,
+        "state": null,
+        "country": null,
+        "display": null
+      },
+      "apply_url": "https://cutshort.io/job/Frontend-Developer-Intern-Mumbai-Rejolut-Technology-Solutions-Pvt-Ltd--5Dnj741N",
+      "employment_type": null,
+      "work_mode": null,
+      "salary": null,
+      "is_paid": false,
+      "deadline": null,
+      "requirements": [],
+      "skills": [],
+      "score": 80,
+      "reasoning": "The candidate's skills and experience in frontend development, particularly with React, align well with the opportunity for a frontend developer intern, despite the lack of information about the company and specific requirements.",
+      "missing_requirements": [
+        "Specific company requirements",
+        "Detailed job description"
+      ],
+      "tier": "unresolved_location",
+      "allocation_reason": "widened"
+    },
+    {
+      "title": "Palantir Technologies - Software Engineer, Internship",
+      "company": null,
+      "description": null,
+      "location": {
+        "city": null,
+        "state": null,
+        "country": null,
+        "display": null
+      },
+      "apply_url": "https://jobs.lever.co/palantir/373eb939-6f57-4836-8479-be79a5e07249",
+      "employment_type": null,
+      "work_mode": null,
+      "salary": null,
+      "is_paid": false,
+      "deadline": null,
+      "requirements": [],
+      "skills": [],
+      "score": 80,
+      "reasoning": "The candidate is a student and the opportunity is an internship, which is a good match, but the lack of specific requirements and skills in the opportunity makes it difficult to assess a perfect fit.",
+      "missing_requirements": [],
+      "tier": "unresolved_location",
+      "allocation_reason": "widened"
+    },
+    {
+      "title": "Relay - Frontend Developer (React, TypeScript)",
+      "company": null,
+      "description": null,
+      "location": {
+        "city": null,
+        "state": null,
+        "country": null,
+        "display": null
+      },
+      "apply_url": "https://jobs.lever.co/relay/298f0f7a-d493-49fa-935d-89a76ef09665",
+      "employment_type": null,
+      "work_mode": null,
+      "salary": null,
+      "is_paid": false,
+      "deadline": null,
+      "requirements": [],
+      "skills": [],
+      "score": 80,
+      "reasoning": "The candidate's skills and experience in React and TypeScript align well with the opportunity's requirements, despite the opportunity lacking detailed information.",
+      "missing_requirements": [],
+      "tier": "unresolved_location",
+      "allocation_reason": "widened"
+    },
+    {
+      "title": "Software Engineer Intern @ Simular",
+      "company": null,
+      "description": null,
+      "location": {
+        "city": null,
+        "state": null,
+        "country": null,
+        "display": null
+      },
+      "apply_url": "https://jobs.ashbyhq.com/simular/063f177b-c3f2-44d2-8eeb-622a977e7d5a?embed=js",
+      "employment_type": null,
+      "work_mode": null,
+      "salary": null,
+      "is_paid": false,
+      "deadline": null,
+      "requirements": [],
+      "skills": [],
+      "score": 80,
+      "reasoning": "The candidate's skills and experience in web development, particularly with React and Next.js, align well with the software engineer intern role, despite the opportunity details being sparse.",
+      "missing_requirements": [],
+      "tier": "unresolved_location",
+      "allocation_reason": "widened"
+    }
+  ],
+  "scoring": {
+    "attempted": 46,
+    "succeeded": 46,
+    "failed": 0
+  },
+  "allocation": {
+    "returned": 4,
+    "target": 10,
+    "quota_status": "insufficient",
+    "scored_candidates": 20,
+    "below_score_floor": 1,
+    "excluded_no_apply_url": 6,
+    "excluded_aggregator_page": 9,
+    "min_score": 50,
+    "geographic_target_met": false,
+    "scoring": {
+      "attempted": 46,
+      "succeeded": 46,
+      "failed": 0
+    }
+  },
+  "weak_profile": {
+    "returned": 4,
+    "minimum_expected": 5,
+    "reasons": [
+      "1 scored below the minimum fit threshold of 50 and were not padded into the results."
+    ],
+    "gaps": [
+      {
+        "skill": "specific company requirements",
+        "postings_requiring": 4,
+        "of_postings_analyzed": 12,
+        "message": "4 of 12 relevant roles wanted specific company requirements, which your resume doesn't show."
+      },
+      {
+        "skill": "detailed job description",
+        "postings_requiring": 3,
+        "of_postings_analyzed": 12,
+        "message": "3 of 12 relevant roles wanted detailed job description, which your resume doesn't show."
+      },
+      {
+        "skill": "specific frontend development internship requirements",
+        "postings_requiring": 2,
+        "of_postings_analyzed": 12,
+        "message": "2 of 12 relevant roles wanted specific frontend development internship requirements, which your resume doesn't show."
+      }
+    ],
+    "gaps_note": "Derived from 12 successfully-scored postings."
+  }
+}

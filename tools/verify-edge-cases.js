@@ -58,7 +58,8 @@ async function pipeline(items, candidate) {
 function synth(n, score, extra = {}) {
   return Array.from({ length: n }, (_, i) => ({
     title: `Role ${i}`, company: `Co${i}`, score, scoring_status: 'scored',
-    state: 'Telangana', country: 'India', missing_requirements: [], ...extra,
+    state: 'Telangana', country: 'India', missing_requirements: [],
+    application_url: `https://boards.greenhouse.io/co${i}/jobs/${1000 + i}`, ...extra,
   }));
 }
 
@@ -166,6 +167,7 @@ function synth(n, score, extra = {}) {
   {
     const allFailed = Array.from({ length: 8 }, (_, i) => ({
       title: `F${i}`, score: null, scoring_status: 'failed', scoring_error: 'PROVIDERS_UNAVAILABLE',
+      application_url: `https://boards.greenhouse.io/f/jobs/${3000 + i}`,
     }));
     const r = await pipeline(allFailed, candidate);
     const named = (r.weak_profile?.reasons || []).some((x) => /could not be scored/.test(x));

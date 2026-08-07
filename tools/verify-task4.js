@@ -39,6 +39,9 @@ function synth(n, score, { state = 'Telangana', country = 'India' } = {}) {
     score,
     scoring_status: 'scored',
     state, country,
+    // A real posting has a specific apply URL; product rule 5 now excludes any
+    // item without one, so fixtures must carry one to represent reality.
+    application_url: `https://boards.greenhouse.io/co${i}/jobs/${1000 + i}`,
   }));
 }
 
@@ -50,35 +53,45 @@ function synth(n, score, { state = 'Telangana', country = 'India' } = {}) {
 
   // --- Real captured run ---
   const out = await allocate(asNewShape(scored), candidate);
+  // The allocator returns a single explicit carrier when nothing qualifies.
+  const isCarrier = out.length === 1 && Array.isArray(out[0].opportunities);
+  const allocatedItems = isCarrier ? [] : out;
   const summary = out[0].allocation_summary;
   console.log('\n--- real captured run ---');
-  console.log(`  scores allocated   : ${JSON.stringify(out.map((o) => o.score))}`);
-  console.log(`  tiers              : ${JSON.stringify(out.map((o) => o.tier))}`);
-  console.log(`  allocation_reason  : ${JSON.stringify(out.map((o) => o.allocation_reason))}`);
-  console.log(`  quota_status       : ${out[0].quota_status}`);
+  console.log(`  scores allocated   : ${JSON.stringify(allocatedItems.map((o) => o.score))}`);
+  console.log(`  tiers              : ${JSON.stringify(allocatedItems.map((o) => o.tier))}`);
   console.log(`  allocation_summary : ${JSON.stringify(summary)}`);
 
   console.log('\n=== ASSERTIONS ===');
 
-  assert.ok(out.every((o) => o.score >= summary.min_score),
+  assert.ok(allocatedItems.every((o) => o.score >= summary.min_score),
     'every allocated item must clear the score floor');
   console.log(`  PASS  no item below the score floor (${summary.min_score}) is allocated`);
 
-  assert.ok(out.every((o) => VALID_TIERS.has(o.tier)),
-    `tier must be geographic, got ${JSON.stringify([...new Set(out.map((o) => o.tier))])}`);
+  assert.ok(allocatedItems.every((o) => VALID_TIERS.has(o.tier)),
+    `tier must be geographic, got ${JSON.stringify([...new Set(allocatedItems.map((o) => o.tier))])}`);
   console.log('  PASS  tier is strictly geographic — "backfilled" no longer emitted (F6)');
 
-  assert.ok(out.every((o) => ['quota', 'widened'].includes(o.allocation_reason)),
+  assert.ok(allocatedItems.every((o) => ['quota', 'widened'].includes(o.allocation_reason)),
     'allocation_reason must be quota|widened');
   console.log('  PASS  widening signal moved to allocation_reason');
 
-  assert.notEqual(out[0].quota_status, 'full',
-    '8 qualifying items must not report "full"');
-  console.log(`  PASS  quota_status honest: "${out[0].quota_status}" for ${out.length} of ${summary.target}`);
+  assert.notEqual(summary.quota_status, 'full',
+    'a partial result set must not report "full"');
+  console.log(`  PASS  quota_status honest: "${summary.quota_status}" for ${summary.returned} of ${summary.target}`);
 
   assert.equal(summary.below_score_floor, 1,
     'the genuine score-0 item should be counted below the floor');
   console.log(`  PASS  below_score_floor reported: ${summary.below_score_floor} (the genuine score-0 item)`);
+
+  // Product rule 5, measured on this fixture: 8 of the 9 successfully-scored
+  // items carry no apply URL at all, so nothing survives. That exclusion is the
+  // point — a student cannot apply to an opportunity with no link.
+  assert.equal(summary.excluded_no_apply_url, 8,
+    'items without an apply URL must be excluded and counted');
+  assert.equal(summary.returned, 0);
+  console.log(`  PASS  ${summary.excluded_no_apply_url} items excluded for having no apply URL (product rule 5)`);
+  console.log('        -> this captured run yields 0 usable opportunities, reported honestly');
 
   // --- Edge: more than 10 qualify -> exactly 10, best-ranked ---
   const many = [...synth(8, 95), ...synth(8, 70), ...synth(8, 55)];
@@ -101,6 +114,7 @@ function synth(n, score, { state = 'Telangana', country = 'India' } = {}) {
   // --- Edge: every score failed -> not reported as "all scored low" ---
   const allFailed = Array.from({ length: 6 }, (_, i) => ({
     title: `X${i}`, score: null, scoring_status: 'failed', scoring_error: 'PROVIDERS_UNAVAILABLE',
+    application_url: `https://boards.greenhouse.io/x/jobs/${2000 + i}`,
   }));
   const failedOut = await allocate(allFailed, candidate);
   const fs = failedOut[0].allocation_summary;

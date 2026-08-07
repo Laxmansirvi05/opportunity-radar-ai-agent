@@ -42,6 +42,9 @@ function synth(n, score, missing = []) {
     title: `Role ${i}`, company: `Co${i}`, score,
     scoring_status: 'scored', state: 'Telangana', country: 'India',
     missing_requirements: missing,
+    // A real posting has a specific apply URL; product rule 5 excludes any item
+    // without one, so fixtures must carry one to represent reality.
+    application_url: `https://boards.greenhouse.io/co${i}/jobs/${1000 + i}`,
   }));
 }
 
@@ -51,17 +54,32 @@ function synth(n, score, missing = []) {
 
   console.log('=== TASK 5: weak-resume exit ===');
 
-  // --- Real captured run: 8 qualify -> sufficient ---
+  // --- Real captured run ---
+  // This previously asserted status "ok" with 8 qualifying. Product rule 5 now
+  // excludes items with no apply URL, and 8 of this fixture's 9 successfully-
+  // scored items have none — so the honest outcome is weak_profile with 0.
+  // The expectation changed because the behaviour got stricter and more correct,
+  // not because the assertion was relaxed.
   const real = await pipeline(asNewShape(scored), candidate);
   console.log('\n--- real captured run ---');
   console.log(`  status            : ${real.status}`);
   console.log(`  opportunity_count : ${real.opportunity_count}`);
   console.log(`  scoring           : ${JSON.stringify(real.scoring)}`);
+  console.log(`  excluded_no_apply_url : ${real.allocation.excluded_no_apply_url}`);
 
   console.log('\n=== ASSERTIONS ===');
-  assert.equal(real.status, 'ok', '8 qualifying should be the normal path');
-  assert.ok(!real.weak_profile, 'no weak_profile block when sufficient');
-  console.log('  PASS  8 qualifying -> status "ok", no weak-resume block');
+  assert.equal(real.status, 'weak_profile');
+  assert.equal(real.opportunity_count, 0);
+  assert.equal(real.allocation.excluded_no_apply_url, 8);
+  console.log('  PASS  captured run -> weak_profile with 0, 8 excluded for having no apply URL');
+
+  // --- The "ok" path must stay covered: enough genuinely-usable postings ---
+  const healthy = await pipeline(synth(7, 85, ['Docker']), candidate);
+  assert.equal(healthy.status, 'ok', '7 usable postings should be the normal path');
+  assert.ok(!healthy.weak_profile, 'no weak_profile block when sufficient');
+  assert.equal(healthy.opportunity_count, 7);
+  assert.ok(healthy.opportunities.every((o) => o.apply_url), 'every returned item needs an apply_url');
+  console.log('  PASS  7 usable postings -> status "ok", no weak block, all have apply_url');
 
   // --- Few qualify -> weak path, keeps what qualified, explains why ---
   const fewInput = [
@@ -90,6 +108,7 @@ function synth(n, score, missing = []) {
     ...Array.from({ length: 8 }, (_, i) => ({
       title: `F${i}`, score: null, scoring_status: 'failed', scoring_error: 'PROVIDERS_UNAVAILABLE',
       missing_requirements: null,
+      application_url: `https://boards.greenhouse.io/f/jobs/${3000 + i}`,
     })),
   ];
   const fm = await pipeline(failMix, candidate);
