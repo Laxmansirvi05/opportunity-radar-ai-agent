@@ -316,3 +316,82 @@ test('CORS can be enabled behind the config flag, and requires an origin', async
     /CORS_ORIGIN is required/
   );
 });
+
+// ---------------------------------------------------------------------------
+// Rate limiting and PII retention
+// ---------------------------------------------------------------------------
+
+test('POST /api/jobs is rate limited per caller', async () => {
+  const ctx = await boot({ config: testConfig({ rateLimitMax: 3, rateLimitWindowMs: 60_000 }) });
+  try {
+    const codes = [];
+    for (let i = 0; i < 5; i++) {
+      const { res } = await submit(ctx.base, pdfBuffer());
+      codes.push(res.status);
+    }
+    assert.deepEqual(codes.slice(0, 3), [202, 202, 202], 'first three must be accepted');
+    assert.deepEqual(codes.slice(3), [429, 429], 'further submissions must be rate limited');
+
+    const res = await fetch(`${ctx.base}/api/jobs`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+    });
+    assert.equal((await res.json()).error.code, 'RATE_LIMITED');
+    assert.ok(res.headers.get('retry-after'), 'must tell the caller when to retry');
+  } finally { await ctx.close(); }
+});
+
+test('polling is never rate limited', async () => {
+  const ctx = await boot({ config: testConfig({ rateLimitMax: 1, rateLimitWindowMs: 60_000 }) });
+  try {
+    const { json } = await submit(ctx.base, pdfBuffer());
+    for (let i = 0; i < 8; i++) {
+      const res = await fetch(`${ctx.base}/api/jobs/${json.job_id}`);
+      assert.notEqual(res.status, 429, 'callers told to poll must not be throttled for it');
+    }
+  } finally { await ctx.close(); }
+});
+
+test('the uploaded resume is deleted once the job is terminal (PII)', async () => {
+  // A delayed runner keeps the job in flight long enough to observe that the
+  // upload exists during processing and is gone afterwards.
+  const ctx = await boot({
+    runner: createStubRunner({ response: capturedResponse, delayMs: 250 }),
+  });
+  try {
+    const { json } = await submit(ctx.base, pdfBuffer());
+    const job = ctx.repository._all().find((j) => j.id === json.job_id);
+    const uploadPath = job.resume_path;
+    assert.ok(fs.existsSync(uploadPath), 'upload should exist while the job is in flight');
+
+    await pollUntil(ctx.base, json.job_id, (b) => b.status === 'complete');
+    assert.equal(fs.existsSync(uploadPath), false,
+      'the resume PDF must be deleted once the job completes');
+  } finally { await ctx.close(); }
+});
+
+test('the uploaded resume is deleted even when the job fails', async () => {
+  const ctx = await boot({
+    runner: createStubRunner({ delayMs: 200, throws: new Error('pipeline exploded') }),
+  });
+  try {
+    const { json } = await submit(ctx.base, pdfBuffer());
+    const uploadPath = ctx.repository._all().find((j) => j.id === json.job_id).resume_path;
+    assert.ok(fs.existsSync(uploadPath));
+    await pollUntil(ctx.base, json.job_id, (b) => b.status === 'failed');
+    assert.equal(fs.existsSync(uploadPath), false,
+      'PII must not survive a failed job');
+  } finally { await ctx.close(); }
+});
+
+test('the upload sweep removes files orphaned by a crash', async () => {
+  const config = testConfig({ uploadRetentionMs: 50 });
+  const ctx = await boot({ config, autoRun: false });
+  try {
+    const orphan = path.join(config.uploadDir, 'orphaned-resume.pdf');
+    fs.writeFileSync(orphan, pdfBuffer());
+    await new Promise((r) => setTimeout(r, 120));
+    const removed = ctx.worker.sweepUploads();
+    assert.ok(removed >= 1, 'stale uploads must be swept');
+    assert.equal(fs.existsSync(orphan), false);
+  } finally { await ctx.close(); }
+});

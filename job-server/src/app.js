@@ -117,7 +117,37 @@ function createApp({ repository, config, logger = console, onSubmit }) {
 
   app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
 
+  // Sliding-window rate limit on submissions. Deliberately in-memory: this is a
+  // single-instance internal service, and a shared store would be more moving
+  // parts than the threat warrants. /health and polling are not limited —
+  // callers are told to poll every 15s and must not be punished for it.
+  const submissions = new Map();   // ip -> timestamps[]
+  function rateLimited(ip) {
+    const now = Date.now();
+    const cutoff = now - config.rateLimitWindowMs;
+    const hits = (submissions.get(ip) || []).filter((t) => t > cutoff);
+    if (hits.length >= config.rateLimitMax) {
+      submissions.set(ip, hits);
+      return true;
+    }
+    hits.push(now);
+    submissions.set(ip, hits);
+    // Bound memory: drop clients with no recent activity.
+    if (submissions.size > 5000) {
+      for (const [k, v] of submissions) if (!v.some((t) => t > cutoff)) submissions.delete(k);
+    }
+    return false;
+  }
+
   app.post('/api/jobs', async (req, res) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    if (rateLimited(ip)) {
+      res.setHeader('Retry-After', Math.ceil(config.rateLimitWindowMs / 1000));
+      return res.status(429).json(errorBody(
+        'RATE_LIMITED',
+        `Too many submissions. Limit is ${config.rateLimitMax} per ${Math.round(config.rateLimitWindowMs / 60000)} minutes`
+      ));
+    }
     const contentType = req.get('content-type') || '';
     if (!/multipart\/form-data/i.test(contentType)) {
       return res.status(400).json(errorBody('MISSING_FILE', 'Expected multipart/form-data with a "resume" file'));

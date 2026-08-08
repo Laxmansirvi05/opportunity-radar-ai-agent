@@ -11,6 +11,9 @@
  * stub that replays captured output, with no API calls.
  */
 
+const fs = require('node:fs');
+const path = require('node:path');
+
 class JobWorker {
   /**
    * @param {object} deps
@@ -57,13 +60,57 @@ class JobWorker {
       await this.repository.markFailed(job.id, err);
       this.logger.error?.('job_failed', { jobId: job.id, ...err });
     } finally {
+      // Uploaded resumes are PII and are not needed once the job is terminal.
+      // Deleted here rather than on a timer so the window is as short as
+      // possible; the retention sweep below only catches stragglers.
+      this.discardUpload(job);
       this.busy = false;
     }
     return job;
   }
 
+  /** Remove a job's uploaded resume. Never throws — cleanup must not fail a job. */
+  discardUpload(job) {
+    if (!job || !job.resume_path) return;
+    try {
+      if (fs.existsSync(job.resume_path)) {
+        fs.unlinkSync(job.resume_path);
+        this.logger.info?.('upload_discarded', { jobId: job.id });
+      }
+    } catch (error) {
+      // Not silenced: recorded so a permissions problem is visible, but a
+      // failure to delete must not mark a completed job as failed.
+      this.logger.warn?.('upload_discard_failed', { jobId: job.id, message: error.message });
+    }
+  }
+
+  /**
+   * Delete uploaded resumes older than the retention window. Catches files
+   * orphaned by a crash between upload and job completion.
+   */
+  sweepUploads() {
+    const dir = this.config.uploadDir;
+    const maxAge = this.config.uploadRetentionMs;
+    let removed = 0;
+    try {
+      for (const name of fs.readdirSync(dir)) {
+        const file = path.join(dir, name);
+        try {
+          const st = fs.statSync(file);
+          if (Date.now() - st.mtimeMs > maxAge) { fs.unlinkSync(file); removed += 1; }
+        } catch { /* file vanished between readdir and stat */ }
+      }
+    } catch (error) {
+      this.logger.warn?.('upload_sweep_failed', { message: error.message });
+      return 0;
+    }
+    if (removed) this.logger.info?.('uploads_swept', { removed });
+    return removed;
+  }
+
   /** Sweep jobs stuck in 'running' past the threshold. */
   async sweep() {
+    this.sweepUploads();
     try {
       const swept = await this.repository.sweepStuck(this.config.stuckAfterMs);
       if (swept.length) {

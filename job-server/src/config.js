@@ -37,6 +37,16 @@ const config = Object.freeze({
   sweepIntervalMs: integer('SWEEP_INTERVAL_MS', process.env.SWEEP_INTERVAL_MS, 60 * 1000),
 
   uploadDir: process.env.UPLOAD_DIR || '/tmp/opportunity-radar-uploads',
+
+  // Rate limiting on POST /api/jobs. The pipeline runs ONE job at a time, so a
+  // single caller submitting in a loop can starve everyone else. Counted per
+  // client IP over a sliding window.
+  rateLimitMax: integer('RATE_LIMIT_MAX', process.env.RATE_LIMIT_MAX, 10),
+  rateLimitWindowMs: integer('RATE_LIMIT_WINDOW_MS', process.env.RATE_LIMIT_WINDOW_MS, 60 * 60 * 1000),
+
+  // Uploaded resumes are PII. They are deleted as soon as the job reaches a
+  // terminal state, and any stragglers are removed after this age.
+  uploadRetentionMs: integer('UPLOAD_RETENTION_MS', process.env.UPLOAD_RETENTION_MS, 24 * 60 * 60 * 1000),
 });
 
 module.exports = config;
