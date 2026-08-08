@@ -404,7 +404,7 @@
             "parameters": [
               {
                 "name": "X-API-Key",
-                "value": "={{ $env.GATEWAY_API_KEY }}"
+                "value": "={{ $env.RENDER_SERVICE_API_KEY }}"
               }
             ]
           },
@@ -431,7 +431,7 @@
         "maxTries": 3,
         "waitBetweenTries": 2000,
         "onError": "continueRegularOutput",
-        "notes": "onError=continueRegularOutput so a render-service outage degrades one item instead of aborting the whole run. Observed live: render-service went offline mid-run and the pipeline died at item 13 of 24 with 'connection refused'. HTTP Request1 and HTTP Request2 already had this setting; this node did not."
+        "notes": "Authenticates against RENDER-SERVICE, which validates its own API_KEY \u2014 NOT the ai-gateway key. These were previously the same hardcoded literal, so pointing this node at $env.GATEWAY_API_KEY during the key rotation broke every render with 401 and silently produced empty pages for all JS-heavy sites. onError=continueRegularOutput so a render outage degrades one item, not the run."
       },
       {
         "parameters": {
