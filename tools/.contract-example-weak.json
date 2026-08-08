@@ -108,7 +108,8 @@
   "scoring": {
     "attempted": 46,
     "succeeded": 46,
-    "failed": 0
+    "failed": 0,
+    "skipped_no_content": 0
   },
   "allocation": {
     "returned": 4,
@@ -123,7 +124,8 @@
     "scoring": {
       "attempted": 46,
       "succeeded": 46,
-      "failed": 0
+      "failed": 0,
+      "skipped_no_content": 0
     }
   },
   "discovery": null,
