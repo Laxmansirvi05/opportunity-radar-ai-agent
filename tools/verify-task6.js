@@ -125,13 +125,38 @@ function runAllItems(nodeName, itemsJson, extraNodes = {}) {
   });
   assert.equal(rmeOut.length, stdItems.length,
     `Resume Match Engine must emit one item per input (${stdItems.length} in, ${rmeOut.length} out)`);
+
+  // Three outcomes are possible and must stay distinguishable:
+  //   scored              — a real score
+  //   skipped_no_content  — nothing to match on; deliberately not called
+  //   failed              — the call was made and the provider failed
+  // Every score must be null unless the item was genuinely scored.
   for (const o of rmeOut) {
-    // Network is blocked, so the node takes its documented failure path.
-    assert.equal(o.json.scoring_status, 'failed', 'blocked network must mark the item failed');
-    assert.equal(o.json.score, null, 'failed score must be null, never 0');
+    assert.ok(['skipped_no_content', 'failed'].includes(o.json.scoring_status),
+      `unexpected status ${o.json.scoring_status}`);
+    assert.equal(o.json.score, null, 'an unscored item must have score null, never 0');
   }
+  const skipped = rmeOut.filter((o) => o.json.scoring_status === 'skipped_no_content');
+  const failed = rmeOut.filter((o) => o.json.scoring_status === 'failed');
   console.log(`  PASS  Resume Match Engine: ${stdItems.length} in -> ${rmeOut.length} out, none dropped`);
-  console.log('        and preserved the task-1 contract (score null + scoring_status failed)');
+  console.log(`        ${skipped.length} skipped for no content, ${failed.length} attempted and failed`);
+
+  // An item WITH content must actually be attempted — and, with the network
+  // blocked, must land on 'failed', never be quietly skipped.
+  const withContent = [{
+    title: 'Frontend Developer Intern',
+    company: 'Acme Corp',
+    description: 'Build React interfaces. TypeScript and Docker preferred.',
+    requirements: ['React'], skills: ['TypeScript'],
+    application_url: 'https://boards.greenhouse.io/acme/jobs/1',
+  }];
+  const attempted = await runAllItems('Resume Match Engine', withContent, {
+    'Code in JavaScript': loadFixture('candidate'),
+  });
+  assert.equal(attempted[0].json.scoring_status, 'failed',
+    'an item with real content must be ATTEMPTED, so a blocked network marks it failed');
+  assert.equal(attempted[0].json.score, null);
+  console.log('  PASS  an item with real content is attempted (failed here), never skipped');
 
   // Clean HTML over real captured html-bearing items.
   const qg = loadFixture('quality-gated');
