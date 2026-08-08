@@ -44,7 +44,7 @@ check('every node targeting ai-gateway sends GATEWAY_API_KEY', () => {
 check('every node targeting render-service sends RENDER_SERVICE_API_KEY', () => {
   for (const n of wf.nodes) {
     const url = String(n.parameters && n.parameters.url || '');
-    if (!/:3000/.test(url)) continue;
+    if (!/:3100/.test(url)) continue;
     const v = headerOf(n.name, 'x-api-key');
     assert.match(String(v), /\$env\.RENDER_SERVICE_API_KEY/,
       `${n.name} targets render-service and must NOT send the gateway key`);

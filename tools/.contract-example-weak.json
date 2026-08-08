@@ -121,6 +121,8 @@
     "excluded_aggregator_page": 9,
     "min_score": 50,
     "geographic_target_met": false,
+    "geography_resolved_pct": 0,
+    "same_state": 0,
     "scoring": {
       "attempted": 46,
       "succeeded": 46,

@@ -22,7 +22,7 @@ curl -s -X POST http://localhost:4000/api/ai/chat \
   }'
 
 echo -e "\n\n=== 6. TEST RENDER-SERVICE DIRECTLY ==="
-curl -s -X POST http://localhost:3000/fetch \
+curl -s -X POST http://localhost:3100/fetch \
   -H "Content-Type: application/json" \
   -d '{"url": "https://example.com"}'
 

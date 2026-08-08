@@ -27,7 +27,7 @@ Hard rules:
 PDF → Extract text → ai-gateway (build profile / CIP)
     → [inline n8n Code node] build search plan     ← should be search-planner:4200
     → Tavily search → normalize → quality gate + dedup
-    → Loop (SEQUENTIAL) → direct GET, fallback render-service:3000 (Playwright)
+    → Loop (SEQUENTIAL) → direct GET, fallback render-service:3100 (Playwright)
     → clean HTML → ai-gateway extract → standardize
     → ai-gateway score-fit → Finalize → Geographic Allocator
     → pipeline_execution.json

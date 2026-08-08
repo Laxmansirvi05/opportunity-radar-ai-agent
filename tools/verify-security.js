@@ -17,7 +17,7 @@ const assert = require('assert');
 const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const RENDER = process.env.RENDER_URL || 'http://127.0.0.1:3000';
+const RENDER = process.env.RENDER_URL || 'http://127.0.0.1:3100';
 const JOBS = process.env.JOB_SERVER_URL || 'http://127.0.0.1:4300';
 
 function env(file, key) {

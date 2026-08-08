@@ -48,7 +48,7 @@ const config = {
   redisUrl: optionalEnv('REDIS_URL', 'redis://localhost:6379'),
 
   // Render Service
-  renderServiceUrl:    optionalEnv('RENDER_SERVICE_URL', 'http://localhost:3000'),
+  renderServiceUrl:    optionalEnv('RENDER_SERVICE_URL', 'http://localhost:3100'),
   renderServiceApiKey: optionalEnv('RENDER_SERVICE_API_KEY', ''),
 
   // AI Gateway

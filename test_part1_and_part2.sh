@@ -6,7 +6,7 @@ echo -e "=== PART 1: TEST RENDER-SERVICE ==="
 PID_RENDER=$!
 sleep 5
 
-curl -s -X POST http://localhost:3000/fetch \
+curl -s -X POST http://localhost:3100/fetch \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${GATEWAY_API_KEY}" \
   -d '{"url": "https://example.com"}' > render-result.json

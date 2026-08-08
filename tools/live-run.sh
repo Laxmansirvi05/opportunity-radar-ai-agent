@@ -41,11 +41,11 @@ for i in $(seq 1 30); do
   ok=0
   curl -sf -m 2 http://localhost:4000/health >/dev/null 2>&1 && ok=$((ok+1))
   curl -sf -m 2 http://localhost:4200/health >/dev/null 2>&1 && ok=$((ok+1))
-  curl -sf -m 2 http://localhost:3000/health >/dev/null 2>&1 && ok=$((ok+1))
+  curl -sf -m 2 http://localhost:3100/health >/dev/null 2>&1 && ok=$((ok+1))
   [ "$ok" -ge 3 ] && break
   sleep 1
 done
-echo "service health: ai-gateway=$(curl -sf -m 2 http://localhost:4000/health >/dev/null 2>&1 && echo up || echo DOWN) search-planner=$(curl -sf -m 2 http://localhost:4200/health >/dev/null 2>&1 && echo up || echo DOWN) render=$(curl -sf -m 2 http://localhost:3000/health >/dev/null 2>&1 && echo up || echo DOWN)"
+echo "service health: ai-gateway=$(curl -sf -m 2 http://localhost:4000/health >/dev/null 2>&1 && echo up || echo DOWN) search-planner=$(curl -sf -m 2 http://localhost:4200/health >/dev/null 2>&1 && echo up || echo DOWN) render=$(curl -sf -m 2 http://localhost:3100/health >/dev/null 2>&1 && echo up || echo DOWN)"
 
 # --- import current workflow ---
 npx --yes n8n import:workflow --input=workflows.json > "$OUTDIR/import.log" 2>&1

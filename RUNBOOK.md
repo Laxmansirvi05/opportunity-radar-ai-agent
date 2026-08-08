@@ -16,7 +16,7 @@ apply links. Six moving parts:
 | Redis | 6379 | reserved for the Data Plane | not for the pipeline |
 | ai-gateway | 4000 | all LLM calls, provider failover | **yes** |
 | search-planner | 4200 | resume → search plan intelligence | **yes** |
-| render-service | 3000 | Playwright fallback for JS-heavy pages | **yes** |
+| render-service | 3100 | Playwright fallback for JS-heavy pages | **yes** |
 | job-server | 4300 | `POST /api/jobs`, polling | yes, for API use |
 | profile-builder | 4100 | validated CIP + candidate persistence | **not wired** |
 
@@ -63,7 +63,7 @@ cd data && node src/migrate.js
 # 3. Services — each in its own shell, or backgrounded
 cd ai-gateway     && npm start    # :4000
 cd search-planner && npm start    # :4200
-cd render-service && npm start    # :3000
+cd render-service && npm start    # :3100
 cd job-server     && npm start    # :4300
 ```
 
@@ -75,7 +75,7 @@ npx n8n import:workflow --input=workflows.json
 ### Is it up?
 
 ```bash
-for p in 4000 4200 3000 4300; do printf "%s: " $p; curl -sf -m 3 http://localhost:$p/health || echo DOWN; echo; done
+for p in 4000 4200 3100 4300; do printf "%s: " $p; curl -sf -m 3 http://localhost:$p/health || echo DOWN; echo; done
 ```
 
 All four must return `{"status":"ok"}`. `render-service` is the slowest to
@@ -194,7 +194,7 @@ Same cause as above — it is simply the first call to hit the wall.
 ### Run dies at `playwright`
 
 render-service is down or crashed (it has been seen to die mid-run after many
-Chromium pages). Check `/health` on :3000 and restart it. The node is
+Chromium pages). Check `/health` on :3100 and restart it. The node is
 `onError: continueRegularOutput`, so one bad page degrades one item rather than
 killing the run — but the service being *gone* still fails it.
 

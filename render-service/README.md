@@ -59,13 +59,13 @@ npm start
 
 ```bash
 docker build -t opportunity-radar-render-service .
-docker run --rm -p 3000:3000 \
+docker run --rm -p 3100:3100 \
   -e MAX_CONCURRENCY=5 \
   opportunity-radar-render-service
 ```
 
 For docker-compose alongside n8n, put both services on the same network and
-point n8n's HTTP Request node at `http://render-service:3000/fetch`.
+point n8n's HTTP Request node at `http://render-service:3100/fetch`.
 
 ## API
 
@@ -141,7 +141,7 @@ Error response (structured, non-2xx):
 
 Add an **HTTP Request** node:
 - Method: `POST`
-- URL: `http://<render-service-host>:3000/fetch`
+- URL: `http://<render-service-host>:3100/fetch`
 - Body (JSON): `{ "url": "={{ $json.url }}" }`
 - Use this node as the fallback branch of an `IF` node that checks whether a
   plain HTTP-request scrape returned usable content.
