@@ -13,10 +13,10 @@ const { loadConfig } = require("../src/config");
 
 const silentLogger = Object.freeze({ info() {}, warn() {}, error() {} });
 
-function gatewayWith(providers, maxRetries = 1) {
+function gatewayWith(providers, maxRetries = 1, rateLimitWaitMs = 5) {
   return new GatewayService({
     providers,
-    config: { maxRetries, globalTimeoutMs: 1_000 },
+    config: { maxRetries, globalTimeoutMs: 1_000, rateLimitWaitMs },
     logger: silentLogger
   });
 }
@@ -223,4 +223,75 @@ test("provider adapters enable their native JSON mode for structured tasks", asy
 
   assert.equal(geminiRequests[0].body.generationConfig.responseMimeType, "application/json");
   assert.deepEqual(openAiRequests[0].body.response_format, { type: "json_object" });
+});
+
+test("a rate-limited provider is not retried immediately — it is deferred", async () => {
+  // Retrying a 429 with the same large payload consumes the very token budget
+  // being waited on. A ~3k-token call retried 4 times burns Groq's entire
+  // 12k/minute allowance and guarantees the run fails.
+  let groqCalls = 0;
+  let geminiCalls = 0;
+  const gateway = gatewayWith([
+    {
+      name: "groq",
+      async generate() {
+        groqCalls += 1;
+        throw new GatewayError("PROVIDER_RATE_LIMITED", "429", { status: 429, retryable: true, rateLimited: true });
+      }
+    },
+    { name: "gemini", async generate() { geminiCalls += 1; return "from gemini"; } }
+  ], 3);
+
+  const result = await gateway.chat({ prompt: "x" }, {
+    requestId: "rl-1", signal: new AbortController().signal
+  });
+
+  assert.equal(result.text, "from gemini");
+  assert.equal(groqCalls, 1, "a rate-limited provider must be tried once, then deferred");
+  assert.equal(geminiCalls, 1, "the next provider must be tried immediately");
+});
+
+test("when every provider is rate limited, one final pass runs after a wait", async () => {
+  let calls = 0;
+  const gateway = gatewayWith([
+    {
+      name: "groq",
+      async generate() {
+        calls += 1;
+        // Refuse on the first pass, succeed once the window has cleared.
+        if (calls === 1) {
+          throw new GatewayError("PROVIDER_RATE_LIMITED", "429", { status: 429, retryable: true, rateLimited: true });
+        }
+        return "recovered";
+      }
+    }
+  ], 3);
+
+  const result = await gateway.chat({ prompt: "x" }, {
+    requestId: "rl-2", signal: new AbortController().signal
+  });
+
+  assert.equal(result.text, "recovered");
+  assert.equal(calls, 2, "exactly one first attempt and one post-wait attempt");
+});
+
+test("a 5xx is still retried against the same provider", async () => {
+  let calls = 0;
+  const gateway = gatewayWith([
+    {
+      name: "groq",
+      async generate() {
+        calls += 1;
+        if (calls < 3) throw new GatewayError("PROVIDER_TRANSIENT_FAILURE", "503", { status: 503, retryable: true });
+        return "ok after retry";
+      }
+    }
+  ], 3, 5);
+  // Transient 5xx failures are a different case from rate limiting and must
+  // keep their existing retry behaviour.
+  const result = await gateway.chat({ prompt: "x" }, {
+    requestId: "rl-3", signal: new AbortController().signal
+  });
+  assert.equal(result.text, "ok after retry");
+  assert.equal(calls, 3);
 });

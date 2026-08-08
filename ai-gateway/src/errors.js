@@ -1,10 +1,13 @@
 class GatewayError extends Error {
-  constructor(code, message, { status = 500, retryable = false, cause } = {}) {
+  constructor(code, message, { status = 500, retryable = false, rateLimited = false, cause } = {}) {
     super(message, { cause });
     this.name = "GatewayError";
     this.code = code;
     this.status = status;
     this.retryable = retryable;
+    // Rate limiting is retryable but must NOT be retried against the same
+    // provider immediately — see http-client.providerErrorForStatus.
+    this.rateLimited = rateLimited;
   }
 }
 

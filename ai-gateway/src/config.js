@@ -30,6 +30,10 @@ function loadConfig(env) {
     globalTimeoutMs,
     providerTimeoutMs,
     maxRetries: integer("MAX_PROVIDER_RETRIES", env.MAX_PROVIDER_RETRIES, { min: 0, max: 5, fallback: 3 }),
+    // How long to wait when EVERY provider is rate limited, before one final
+    // attempt each. Sized to outlast a per-minute token window (Groq reports
+    // ~13s to reset); a shorter wait just fails again.
+    rateLimitWaitMs: integer("RATE_LIMIT_WAIT_MS", env.RATE_LIMIT_WAIT_MS, { min: 1_000, max: 120_000, fallback: 20_000 }),
     providers: Object.freeze({
       groq: Object.freeze({
         apiKey: required("GROQ_API_KEY", env.GROQ_API_KEY),

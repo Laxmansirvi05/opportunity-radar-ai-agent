@@ -1,7 +1,17 @@
 const { GatewayError } = require("./errors");
 
 function providerErrorForStatus(status) {
-  if (status === 429 || status === 500 || status === 502 || status === 503 || status === 504) {
+  // 429 is deliberately NOT the same as a 5xx. Retrying a rate-limited provider
+  // with the same large payload consumes the very token budget you are waiting
+  // for: a ~3k-token call retried 4 times burns Groq's entire 12k/minute
+  // allowance and guarantees failure. Rate limits must move to the next
+  // provider first, not hammer the one that just refused.
+  if (status === 429) {
+    return new GatewayError("PROVIDER_RATE_LIMITED", "Provider is rate limited", {
+      status, retryable: true, rateLimited: true
+    });
+  }
+  if (status === 500 || status === 502 || status === 503 || status === 504) {
     return new GatewayError("PROVIDER_TRANSIENT_FAILURE", "Provider request failed", { status, retryable: true });
   }
   if (status === 400 || status === 404) {
