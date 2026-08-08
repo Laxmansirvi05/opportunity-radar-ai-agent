@@ -73,8 +73,9 @@ Real output, `SHOWCASE-1-strong`:
 
 ## 2. Four lists
 
-**Live-verified:** full pipeline completes (`rc=0`, 3 runs); the render-service
-401 regression and its whole cascade; scoring failure rate 0% (20/20, 27/27);
+**Live-verified:** full pipeline completes (`rc=0`, 5 runs); **company,
+description and apply_url at 100%**; **geography resolving at 83%**; the
+render-service 401 regression and its whole cascade; scoring failure rate 0% (20/20, 27/27);
 internship routing; tiering fields present in a real response; clean role
 titles; 5/6 apply URLs resolve 200; `skipped_no_content` working (14 attempted →
 6 scored, 8 skipped); SSRF blocking; provider limits with exact error bodies.
@@ -88,7 +89,7 @@ their messages; conditional broadening (fires 11→17 and 5→22, skipped at 22 
 14); gate admits zero listing pages; contract shape; provenance merge recovering
 7/8 company+URL pairs; 18 edge cases; 227 unit tests.
 
-**Untested:** the provenance fix live (criterion 4); 5 varied resumes; job
+**Untested:** the tightened category/careers-root filter; 3 of 5 resumes; job
 server against the real pipeline; live concurrent submissions; malicious-resume
 injection test; scanned/empty/non-English PDFs; Tavily-zero and all-scrapes-fail
 conditions; DB-unreachable.
@@ -97,52 +98,61 @@ conditions; DB-unreachable.
 
 ## 3. Per-resume results
 
-Only one resume was run this session — quota did not permit five. Honest record
-of the six live runs, all with `student-strong-2nd-year.pdf`:
+Two resumes completed on the final code; the third was blocked when all three
+providers hit their daily limits.
 
-| Run | Result | Tier | Scoring | Wall-clock |
-|---|---|---|---|---|
-| `prod-p1-gate` | 0 opportunities | `none` | 21/22, 4.5% fail | 1348s |
-| `prod-p3-verify` | **6 opportunities** | `good` | 20/20, 0% fail | 525s |
-| `prod-p4-quality` | 0 opportunities | `none` | 6 scored, 8 skipped | 802s |
-| `prod-p5-final` | crashed at first LLM call | — | — | 383s |
-| `prod-p6-confirm` | crashed — Tavily quota | — | — | 106s |
+| Resume | Result | Tier | Strength | Scoring | Wall-clock |
+|---|---|---|---|---|---|
+| **Strong CS, 2nd year** | **6 opportunities** | `good` | `strong` | 6/6, 0 failed, 7 skipped | 517s |
+| **Thin / sparse** | 0 opportunities | `none` | `needs_work` | 3 scored, 1 failed, 15 skipped | 990s |
+| Non-CS mechanical | blocked — provider quota | — | — | — | 2 attempts |
+| No location | not run — quota | — | — | — | — |
+| Final-year CS | verified in an earlier session (routing) | — | — | — | — |
 
-Real feedback text produced at each tier (replay, from real aggregated gaps):
+**Strong resume, real output:**
 
-- **good (5–7):** *"Good match rate. To reach even more internships, consider adding Docker, AWS, and TypeScript — these came up in the roles you matched."*
+```
+[same_state]    98  Anvaya AI              Frontend Developer Intern
+[same_state]    98  Nizam Digital          Frontend Developer Intern
+[same_state]    95  Landeed                Frontend Developer Intern
+[same_country]  95  Avadhuta Technologies  Web Developer Intern
+[international] 75  Coinhako               Frontend Engineering Intern
+[unresolved]   100  StayingBee             Frontend Developer Intern
+```
+> *"Good match rate. Adding a deployed project or an internship to your resume typically widens the range of roles you match."*
+
+**Thin resume** — correctly returns nothing rather than padding, and names a
+real gap taken from actual scored postings:
+> *"We could not find internships that match your resume yet. The roles closest to your profile wanted JavaScript. Start by building one project that uses JavaScript…"*
+
+Feedback text for the tiers not hit live (replay, from real aggregated gaps):
+
 - **limited (3–4):** *"Your resume matched a limited number of internships. Most of the roles you came close to wanted Docker, AWS, and TypeScript — adding one of these, ideally shown through a deployed project, should noticeably improve your matches."*
-- **very_limited (1–2):** *"Your resume is currently limiting your matches. The roles you came closest to wanted Docker, AWS, and TypeScript. Building one substantial project that uses them — and describing what you built and deployed — should make a clear difference."*
-- **none (0):** *"We could not find internships that match your resume yet. Start by naming the specific technologies you have used and adding one project you have built and deployed."*
+- **very_limited (1–2):** *"Your resume is currently limiting your matches… Building one substantial project that uses them should make a clear difference."*
 - **scoring outage:** *"We could not score 9 of 11 matches because of a temporary problem on our side… this is not a reflection of your resume."*
 
 ---
 
 ## 4. Quality metrics
 
+Measured on `SHOWCASE-1-strong`, the final code:
+
 | Metric | Measured | Target | Status |
 |---|---|---|---|
-| `title` populated (returned) | **6/6 (100%)** | — | good |
-| Titles are role titles | **live-confirmed clean** | — | met |
-| `company` populated (returned) | **0/6** | ≥85% | **not met — fix unverified** |
-| `description` populated (returned) | **0/6** | ≥85% | **not met — fix unverified** |
+| `title` populated | **6/6 (100%)** | — | met |
+| Titles are role titles | **clean** | — | met |
+| `company` populated | **6/6 (100%)** | ≥85% | **met** |
+| `description` populated | **6/6 (100%)** | ≥85% | **met** |
 | `apply_url` present | **6/6 (100%)** | — | met |
-| `apply_url` resolves | **5/6 (83%)** | ≥95% | partial |
+| `apply_url` resolves to a posting | **4/6 (67%)** | ≥95% | **partial** |
+| Geography resolved | **83%**, 3 same-state | — | met |
+| Scoring failures | **0** | <10% | met |
 
-**Why company/description are 0% and what was done.** Traced, not guessed:
-`JSON Parse` replaced the item with the LLM's extracted output, discarding the
-source URL. The effect was a perfect inversion — items where extraction
-*succeeded* (so had company and description) lost their URL and were then
-excluded by product rule 5, while the items that survived were exactly those
-where extraction had been skipped. Every returned opportunity therefore had
-`company: null`.
-
-Fixed in two steps: merge extracted fields onto the item instead of replacing
-it, and — because on the extraction branch `$json` is the gateway *response*,
-not the item — recover provenance from the guard node by paired item. Replaying
-the real captured extraction responses, **7 of 8 now carry both a company and an
-apply URL (was 0)**. This has not run live. It is the single highest-value
-unverified change in the repo.
+On `apply_url`: 5 of 6 returned HTTP 200, but two were not *specific postings* —
+a `/category/internship` listing and a `/join-us` careers root (which also 403'd).
+Both patterns are now filtered at the gate and the allocator, anchored to the end
+of the path so a genuine posting under a careers path still survives. **That
+filter has not run live.**
 
 ---
 
