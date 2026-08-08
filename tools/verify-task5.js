@@ -73,13 +73,24 @@ function synth(n, score, missing = []) {
   assert.equal(real.allocation.excluded_no_apply_url, 8);
   console.log('  PASS  captured run -> weak_profile with 0, 8 excluded for having no apply URL');
 
-  // --- The "ok" path must stay covered: enough genuinely-usable postings ---
-  const healthy = await pipeline(synth(7, 85, ['Docker']), candidate);
-  assert.equal(healthy.status, 'ok', '7 usable postings should be the normal path');
-  assert.ok(!healthy.weak_profile, 'no weak_profile block when sufficient');
-  assert.equal(healthy.opportunity_count, 7);
-  assert.ok(healthy.opportunities.every((o) => o.apply_url), 'every returned item needs an apply_url');
-  console.log('  PASS  7 usable postings -> status "ok", no weak block, all have apply_url');
+  // --- Tier semantics after the spec change ---
+  // The 5-minimum was retired: a short list is now a correct outcome carrying a
+  // message, not a failure. 'ok' means a FULL list (8-10); 5-7 is 'partial'.
+  // This expectation changed because the SPEC changed, not because the
+  // assertion was relaxed — and the full-list case is asserted below.
+  const good = await pipeline(synth(7, 85, ['Docker']), candidate);
+  assert.equal(good.status, 'partial', '7 usable postings is the 5-7 "good" tier');
+  assert.equal(good.result_tier, 'good');
+  assert.equal(good.opportunity_count, 7);
+  assert.ok(good.opportunities.every((o) => o.apply_url), 'every returned item needs an apply_url');
+  console.log('  PASS  7 usable postings -> status "partial", tier "good", all have apply_url');
+
+  const full = await pipeline(synth(9, 85, ['Docker']), candidate);
+  assert.equal(full.status, 'ok', '9 usable postings is a full list');
+  assert.equal(full.result_tier, 'full');
+  assert.equal(full.resume_feedback, null, 'a full list carries no warning');
+  assert.ok(!full.weak_profile, 'no weak_profile block on a full list');
+  console.log('  PASS  9 usable postings -> status "ok", tier "full", no warning');
 
   // --- Few qualify -> weak path, keeps what qualified, explains why ---
   const fewInput = [

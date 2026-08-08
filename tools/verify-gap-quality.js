@@ -26,7 +26,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const API_KEY = process.env.GATEWAY_API_KEY || process.env.GATEWAY_API_KEY;
+const API_KEY = process.env.GATEWAY_API_KEY;
 const URL = 'http://localhost:4000/api/ai/chat';
 const LIMIT = Number(process.argv[2] || 20);
 

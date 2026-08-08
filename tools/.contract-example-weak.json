@@ -1,9 +1,12 @@
 {
   "status": "weak_profile",
+  "result_tier": "limited",
+  "resume_strength": "moderate",
+  "resume_feedback": "Your resume matched a limited number of internships. Most of the roles you came close to wanted Specific company requirements, Detailed job description, and specific frontend development internship requirements — adding one of these, ideally shown through a deployed project, should noticeably improve your matches.",
   "opportunity_count": 4,
   "opportunities": [
     {
-      "title": "Rejolut is hiring Frontend Developer Intern job in Mumbai (Remote friendly) | Cutshort",
+      "title": "Frontend Developer Intern job in Mumbai",
       "company": null,
       "description": null,
       "location": {
@@ -78,7 +81,7 @@
       "allocation_reason": "widened"
     },
     {
-      "title": "Software Engineer Intern @ Simular",
+      "title": "Software Engineer Intern",
       "company": null,
       "description": null,
       "location": {
@@ -126,25 +129,28 @@
   "discovery": null,
   "weak_profile": {
     "returned": 4,
-    "minimum_expected": 5,
+    "target": 8,
     "reasons": [
       "1 scored below the minimum fit threshold of 50 and were not padded into the results."
     ],
     "gaps": [
       {
         "skill": "specific company requirements",
+        "label": "Specific company requirements",
         "postings_requiring": 4,
         "of_postings_analyzed": 12,
-        "message": "4 of 12 relevant roles wanted specific company requirements, which your resume doesn't show."
+        "message": "4 of 12 relevant roles wanted Specific company requirements, which your resume doesn't show."
       },
       {
         "skill": "detailed job description",
+        "label": "Detailed job description",
         "postings_requiring": 3,
         "of_postings_analyzed": 12,
-        "message": "3 of 12 relevant roles wanted detailed job description, which your resume doesn't show."
+        "message": "3 of 12 relevant roles wanted Detailed job description, which your resume doesn't show."
       },
       {
         "skill": "specific frontend development internship requirements",
+        "label": "specific frontend development internship requirements",
         "postings_requiring": 2,
         "of_postings_analyzed": 12,
         "message": "2 of 12 relevant roles wanted specific frontend development internship requirements, which your resume doesn't show."
