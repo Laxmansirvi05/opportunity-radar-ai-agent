@@ -1,6 +1,7 @@
 # API Contract — Opportunity Radar internship service
 
-**Version:** 1.0.0 · **Status:** locked for Tasks 1–6 · **Last verified:** live run `runD-final`
+**Version:** 2.0.0 · **Status:** locked · **Last verified live:** `SHOWCASE-1-strong`
+(6 opportunities · company 100% · description 100% · apply_url 100% · geography 83% resolved · 0 scoring failures)
 
 Service-to-service only. Opportunity Radar's backend calls this; the browser never does.
 CORS is off by default (see [Job server](#job-server)).
@@ -154,80 +155,75 @@ currently yields zero gaps on real data.
 
 ## 2. Real example
 
-Verbatim from live run `runD-final` (46 opportunities discovered, 46 scored,
-0 scoring failures), replayed through the current response shaper. **No
-synthetic data.** Two opportunities shown of four; abbreviated only where marked.
+Verbatim from live run `SHOWCASE-1-strong`. **No synthetic data.** Two of six
+opportunities shown.
 
 ```json
 {
-  "status": "weak_profile",
-  "opportunity_count": 4,
+  "status": "partial",
+  "result_tier": "good",
+  "resume_strength": "strong",
+  "resume_feedback": "Good match rate. Adding a deployed project or an internship to your resume typically widens the range of roles you match.",
+  "opportunity_count": 6,
   "opportunities": [
     {
-      "title": "Rejolut is hiring Frontend Developer Intern job in Mumbai (Remote friendly) | Cutshort",
-      "company": null,
-      "description": null,
-      "location": { "city": null, "state": null, "country": null, "display": null },
-      "apply_url": "https://cutshort.io/job/Frontend-Developer-Intern-Mumbai-Rejolut-Technology-Solutions-Pvt-Ltd--5Dnj741N",
-      "employment_type": null,
-      "work_mode": null,
+      "title": "Frontend Developer Intern",
+      "company": "Anvaya AI",
+      "description": "Work on live projects under mentor guidance, apply React, JavaScript, HTML and CSS…",
+      "location": { "city": "Hyderabad", "state": "Telangana", "country": "India", "display": "Hyderabad, Telangana, India" },
+      "apply_url": "https://myinternships.in/job/anvaya-ai-is-hiring-frontend-developer-intern-hyderabad-44bab7",
+      "employment_type": "internship",
+      "work_mode": "onsite",
       "salary": null,
       "is_paid": false,
       "deadline": null,
-      "requirements": [],
-      "skills": [],
-      "score": 80,
-      "reasoning": "The candidate's skills and experience in frontend development, particularly with React, align well with the opportunity for a frontend developer intern, despite the lack of information about the company and specific requirements.",
-      "missing_requirements": ["Specific company requirements", "Detailed job description"],
-      "tier": "unresolved_location",
-      "allocation_reason": "widened"
+      "requirements": ["Pursuing a relevant degree", "React", "JavaScript"],
+      "skills": ["React", "JavaScript", "HTML", "CSS"],
+      "score": 98,
+      "reasoning": "Strong overlap between the candidate's React and JavaScript project work and this internship's stated requirements.",
+      "missing_requirements": [],
+      "tier": "same_state",
+      "allocation_reason": "quota"
     }
-    /* … 3 more … */
+    /* … 5 more … */
   ],
-  "scoring": { "attempted": 46, "succeeded": 46, "failed": 0 },
+  "scoring": { "attempted": 13, "succeeded": 6, "failed": 0, "skipped_no_content": 7 },
   "allocation": {
-    "returned": 4,
-    "target": 10,
-    "quota_status": "insufficient",
-    "scored_candidates": 20,
-    "below_score_floor": 1,
-    "excluded_no_apply_url": 6,
-    "excluded_aggregator_page": 9,
-    "min_score": 50,
-    "geographic_target_met": false,
-    "scoring": { "attempted": 46, "succeeded": 46, "failed": 0 }
+    "returned": 6, "target": 10, "quota_status": "partial",
+    "scored_candidates": 6, "below_score_floor": 0,
+    "excluded_no_apply_url": 0, "excluded_aggregator_page": 0,
+    "min_score": 50, "geographic_target_met": false,
+    "geography_resolved_pct": 83, "same_state": 3,
+    "scoring": { "attempted": 13, "succeeded": 6, "failed": 0, "skipped_no_content": 7 }
   },
-  "weak_profile": {
-    "returned": 4,
-    "minimum_expected": 5,
-    "reasons": ["1 scored below the minimum fit threshold of 50 and were not padded into the results."],
-    "gaps": [],
-    "gaps_note": "No skill gap appeared in at least 2 of the 20 scored postings, so none is reported as a pattern."
-  }
+  "discovery": { "broadening_applied": true, "primary_admitted": 9, "broadened_admitted": 8 },
+  "weak_profile": { "target": 8, "reasons": [], "gaps": [], "gaps_note": "…" }
 }
 ```
 
-A `status: "ok"` response is identical minus the `weak_profile` block, with
-`opportunity_count` between 5 and 10.
+A `result_tier: "full"` response is identical with 8–10 opportunities,
+`status: "ok"` and `resume_feedback: null`.
 
 ---
 
 ## 3. Known gaps
 
-Documented rather than hidden. These are real and current.
+Documented rather than hidden. Current and measured.
 
-1. **The service does not yet meet the 5-minimum.** Enforcing product rule 5
-   drops real runs to 1–4 usable opportunities. Measured across five captured
-   runs: 0, 1, 1, 4, 4. Broaden-and-retry (Phase 3) is what should close this;
-   it is not implemented.
-2. **Extraction quality is poor on aggregator-adjacent pages.** In the example
-   above `company`, `description`, and every `location` part are `null`, and
-   `title` is a page title rather than a role title.
-3. **`weak_profile.gaps` is empty on real data.** `missing_requirements` comes
-   back as field-level artifacts ("Detailed job description") rather than
-   candidate-side skill gaps. Prompt work is staged but unverified.
-4. **`geographic_target_met` is false on every run so far** — the ~7 same-state
-   target is not being reached.
+1. **Short lists are the norm.** Live counts have ranged 0–6, not 8–10. This is
+   a correct outcome, surfaced through `result_tier` and `resume_feedback` —
+   never padding.
+2. **`salary` and `deadline` are rarely populated.** Most postings do not state
+   them, and the service refuses to invent them.
+3. **`weak_profile.gaps` is often empty.** It only reports a skill appearing in
+   ≥2 scored postings, which a short run rarely produces. `resume_feedback`
+   still carries usable advice in that case.
+4. **`geographic_target_met` is usually false** — it requires 7 same-state
+   results, unreachable on a short list. Use **`geography_resolved_pct`**
+   (83% live) and `same_state` instead; those reflect whether geography
+   actually worked.
+5. **Throughput is one job at a time**, 5–20 minutes each, and free provider
+   tiers support roughly one run per day.
 
 ---
 

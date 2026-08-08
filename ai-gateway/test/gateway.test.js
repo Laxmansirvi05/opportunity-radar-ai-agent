@@ -115,8 +115,8 @@ test("loads a complete production configuration", () => {
     GROQ_API_KEY: "groq-secret",
     OPENROUTER_API_KEY: "openrouter-secret"
   });
-  // Timeouts were deliberately raised (walkthrough.md: PROVIDER_TIMEOUT_MS 25s -> 60s,
-  // to let slower free-tier fallback models finish); this expectation was never
+  // Timeouts were deliberately raised (PROVIDER_TIMEOUT_MS 25s -> 60s, so slower
+  // free-tier fallback models can finish); this expectation was never
   // updated and had been failing against config.js since that change.
   assert.equal(config.globalTimeoutMs, 120_000);
   assert.equal(config.providerTimeoutMs, 60_000);

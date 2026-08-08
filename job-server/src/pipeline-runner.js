@@ -9,7 +9,7 @@
  *   createStubRunner   — replays a captured response, so the entire job server
  *                        can be tested with zero API calls.
  *
- * n8n webhook mode is NOT used yet — see FINAL_REPORT.md. The one-shot CLI path
+ * n8n webhook mode is NOT used yet (see ARCHITECTURE.md). The one-shot CLI path
  * is what the pipeline has actually been verified with.
  */
 

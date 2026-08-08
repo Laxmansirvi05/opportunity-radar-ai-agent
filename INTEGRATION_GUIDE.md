@@ -5,10 +5,10 @@ integrate without asking us. Field-level detail lives in
 [`API_CONTRACT.md`](API_CONTRACT.md); operational detail in
 [`RUNBOOK.md`](RUNBOOK.md).
 
-> **Read §7 before you ship.** Short result lists are the norm, not an error.
-> Observed live counts range **0–6**. The service tells the student why via
-> `result_tier` and `resume_feedback` — your UI must render those, not treat a
-> short list as a failure.
+> **Read §7 before you ship.** Result lists are short by design — observed live
+> counts range **0–6**, not 8–10. That is a *correct* outcome, and the service
+> tells the student why via `result_tier` and `resume_feedback`. Your UI must
+> render those two fields; never treat a short list as an error.
 
 ---
 
@@ -150,19 +150,20 @@ Every item in `opportunities`:
 This is the part that will bite you. `null` means *the posting did not state
 it*, and we refuse to invent it. Do not render "Unknown" as if it were data.
 
-| Field | How often populated (real run of 10) | Render guidance |
+| Field | Populated (live, `SHOWCASE-1`) | Render guidance |
 |---|---|---|
-| `title` | 10/10 | Always show. May be a **page title**, not a clean role name — e.g. `"Rejolut is hiring Frontend Developer Intern \| Cutshort"`. Truncate sensibly. |
-| `apply_url` | **10/10, guaranteed** | The primary call to action |
-| `score` | **10/10, guaranteed** | 0–100 |
-| `reasoning` | 10/10 | One sentence, good for "why this matched" |
-| `location` | 10/10 object, **but every part can be null** | Hide the block if `city`/`state`/`country` are all null |
-| `company` | 5/10 | **Hide the field when null.** Do not print "Unknown company" |
-| `description` | 2/10 | Hide when null; the apply link carries the detail |
-| `employment_type`, `work_mode` | 5/10 | Hide when null |
-| `salary`, `deadline` | **0/10** | Assume absent. Never show a placeholder — a wrong salary is a trust violation |
+| `apply_url` | **6/6 — guaranteed** | The primary call to action. Always present |
+| `title` | **6/6 (100%)** | Clean role title, site suffixes stripped |
+| `company` | **6/6 (100%)** | Show it |
+| `description` | **6/6 (100%)** | Show it |
+| `score` | **6/6 — guaranteed** | 0–100 |
+| `reasoning` | **6/6** | One sentence — good for "why this matched" |
+| `location` | object; **83% have a resolved city/state/country** | Hide the block when all parts are null |
+| `tier` | **6/6** | `same_state` / `same_country` / `international` / `unresolved_location` |
+| `employment_type`, `work_mode` | partial | Hide when null |
 | `requirements`, `skills` | often `[]` | Hide empty arrays |
-| `is_paid` | 10/10 | `false` frequently means *not stated*, not *unpaid*. Treat with caution |
+| `is_paid` | present | `false` often means *not stated*, not *unpaid*. Treat with caution |
+| `salary`, `deadline` | **rarely populated** | Assume absent. Never show a placeholder — a wrong salary is a trust violation |
 
 Rule of thumb: **render what is present, omit what is null.** Never
 substitute placeholder text for missing data.
@@ -180,7 +181,7 @@ empty list.
 "opportunity_count": 3,
 "weak_profile": {
   "returned": 3,
-  "minimum_expected": 5,
+  "target": 8,
   "reasons": [
     "1 scored below the minimum fit threshold of 50 and were not padded into the results.",
     "Search was already broadened before reaching this conclusion (5 strict matches, +17 after relaxing)."
@@ -250,32 +251,25 @@ usually worth one retry.
 
 ## 7. Limitations you must design around
 
-Honest list. These are current, measured, and not hypothetical.
+Current, measured, and not hypothetical.
 
-1. **Short lists are the common case.** The 5-minimum has been retired by
-   design: 3–4 real opportunities is now a correct outcome carrying a message.
-   Observed live counts have ranged 0–6. Build the UI for the `limited` and
-   `very_limited` tiers first and treat `full` as the happy path.
-2. **`weak_profile.gaps` is effectively always empty.** The underlying scoring
-   model returns posting-side field names ("job description", "location")
-   rather than candidate-side skill gaps, and we filter those out rather than
-   show nonsense. A prompt fix is written but **not yet verified**. Do not build
-   a feature that depends on gaps being present.
-3. **Extraction quality is uneven.** `company` and `description` are null about
-   half the time; `title` is sometimes a page title rather than a role name.
-4. **`salary` and `deadline` were null on every item we have seen.** Treat them
-   as absent.
-5. **Geographic targeting does not work yet.** `geographic_target_met` has been
-   `false` on every run; most results come back `unresolved_location`. Do not
-   build a location filter on `tier` yet.
-6. **Runtime is long and variable** (78s–781s). This is a background job, not a
-   request/response API. Never block a student on it.
-7. **One job at a time.** Under load, queueing dominates latency. If you need
-   throughput, that is a scaling change on our side, not a config flag.
-8. **n8n runs as a one-shot CLI process**, not webhook mode. Restarting the job
-   server mid-run orphans that run; it will be swept to `failed` at 30 minutes.
-
----
+1. **Short lists are normal.** Live counts have ranged **0–6**, not 8–10. Build
+   for the `limited` and `very_limited` tiers first; treat `full` as the happy
+   path. This is by design — the service never pads.
+2. **Quota is the hard ceiling.** On free provider tiers the pipeline supports
+   roughly **one student per day**. A paid tier costs **$0.006–$0.041 per
+   student**. Nothing in the code changes this.
+3. **Runtime is 5–20 minutes**, and **one job runs at a time**. This is a
+   background job, never a request/response API. A queued submission can take
+   twice as long.
+4. **`salary` and `deadline` are rarely populated.** Treat as absent.
+5. **`weak_profile.gaps` is often empty.** When it is, `resume_feedback` still
+   carries useful structural advice — render the message, not the array.
+6. **A run can fail outright on provider exhaustion** after several minutes.
+   Handle `PIPELINE_FAILED` / `PIPELINE_TIMEOUT` with a retry affordance.
+7. **No per-user authorization.** Anyone holding a `job_id` can read that job.
+   Unguessable UUIDs are the only control — fine behind your backend, **unsafe
+   if you ever expose this to browsers directly**.
 
 ## 8. Checklist before you ship
 

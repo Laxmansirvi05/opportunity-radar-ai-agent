@@ -273,30 +273,40 @@ scoring failure rate, routing decisions, and the final response.
 
 ## 8. Working without spending quota
 
-Most iteration needs no API calls at all. `tools/replay.js` executes the **real
-node code** from `workflows.json` against captured fixtures:
+Most iteration needs no API calls. `tools/replay.js` executes the **real node
+code** from `workflows.json` against captured fixtures.
 
 ```bash
+node tools/verify-contract.js          # response matches API_CONTRACT.md
+node tools/verify-tiering.js           # all 5 result tiers + feedback
+node tools/verify-gate-specificity.js  # gate admits postings, not listing pages
+node tools/verify-security.js          # 22 security checks (needs services up)
+node tools/verify-edge-cases.js        # 18 edge cases
+node tools/verify-workflow-config.js   # static config guards
 node tools/verify-task1.js             # scoring-failure visibility
 node tools/verify-task4.js             # score floor + tier contract
-node tools/verify-task5.js             # weak-resume exit
-node tools/verify-contract.js          # response matches API_CONTRACT.md
-node tools/verify-gate-specificity.js  # gate admits postings, not listing pages
-node tools/verify-edge-cases.js        # 18 edge cases
+node tools/verify-task5.js             # short-list / weak-resume path
+node tools/verify-task6.js             # loop node correctness
 ```
 
-Test suites (also offline):
+Test suites (offline):
 
 ```bash
 cd ai-gateway && npm test        # 17
 cd search-planner && npm test    # 78
 cd profile-builder && npm test   # 53
 cd execution-fabric && npm test  # 57
-cd job-server && npm test        # 17
+cd job-server && npm test        # 22
 ```
 
-The job server can run end-to-end without touching n8n by pointing it at a
-captured response:
+Analyse any captured run without re-running it:
+
+```bash
+node tools/analyze-run.js live-runs/<label>
+node tools/measure-cost.js <label>          # tokens, calls, cost per student
+```
+
+The job server can run end-to-end without n8n by replaying a captured response:
 
 ```bash
 STUB_PIPELINE=$PWD/tools/.contract-example-ok.json npm start --prefix job-server
