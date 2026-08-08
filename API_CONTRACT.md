@@ -20,12 +20,41 @@ server returns in `GET /api/jobs/:job_id` under `result`.
 
 | Field | Type | Notes |
 |---|---|---|
-| `status` | `"ok"` \| `"weak_profile"` | `weak_profile` when fewer than 5 opportunities qualify |
-| `opportunity_count` | integer | Length of `opportunities`. Never padded |
+| `status` | `"ok"` \| `"partial"` \| `"weak_profile"` | See the tier table below |
+| `result_tier` | `"full"` \| `"good"` \| `"limited"` \| `"very_limited"` \| `"none"` | Which band the count fell in |
+| `resume_strength` | `"strong"` \| `"moderate"` \| `"needs_work"` | How much the resume is limiting matches |
+| `resume_feedback` | string \| null | Student-facing message. `null` only for a full list |
+| `opportunity_count` | integer | Length of `opportunities`. **Never padded** |
 | `opportunities` | array | 0–10 items, shape below, ranked by `score` desc |
 | `scoring` | object | Run-level scoring outcome |
 | `allocation` | object | How the final set was chosen |
-| `weak_profile` | object | **Only present when `status` is `weak_profile`** |
+| `discovery` | object \| null | Whether search was broadened before concluding |
+| `weak_profile` | object | Present whenever the list is short (count < 8) |
+
+### Result tiering
+
+**A short list is a correct outcome, not a failure.** We never pad. The service
+always tries to reach 8–10 by broadening first; when it cannot, it says why.
+
+| Real opportunities | `result_tier` | `status` | `resume_strength` | `resume_feedback` |
+|---|---|---|---|---|
+| 8–10 | `full` | `ok` | `strong` | `null` — no warning |
+| 5–7 | `good` | `partial` | `strong` | light suggestions |
+| 3–4 | `limited` | `weak_profile` | `moderate` | clear resume-strength message |
+| 1–2 | `very_limited` | `weak_profile` | `needs_work` | strong message |
+| 0 | `none` | `weak_profile` | `needs_work` | what to build first |
+
+`resume_feedback` is built from **real aggregated evidence** — the skills that
+actually recurred across the postings this candidate nearly matched. When there
+is no such evidence the copy says so and gives structural advice instead; it
+never dresses generic advice up as analysis.
+
+**A scoring outage is never blamed on the resume.** If most scoring calls fail,
+`resume_feedback` owns it explicitly:
+
+> "We could not score 9 of 11 matches because of a temporary problem on our
+> side, so this list is shorter than it should be. Please try again shortly —
+> this is not a reflection of your resume." 
 
 ### 1.2 `opportunities[]` — exact keys, nothing else
 
@@ -72,9 +101,16 @@ geographies); only the mislabelling is gone. `"backfilled"` is never emitted.
 
 | Field | Type | Notes |
 |---|---|---|
-| `attempted` | integer | Opportunities sent for scoring |
+| `attempted` | integer | Opportunities considered |
 | `succeeded` | integer | Scored successfully |
 | `failed` | integer | Provider errors |
+| `skipped_no_content` | integer | Pages with no readable job details — deliberately not scored |
+
+`skipped_no_content` is a **third outcome**, distinct from both. A page that
+yielded no company, description, requirements or skills gives the model nothing
+to match on, so no scoring call is spent. Counting it as `failed` would
+overstate provider problems; counting it as a low score would conflate "we
+could not read it" with "it is a poor match".
 
 A failed score is **never** treated as a low score. Failed items are excluded
 from results and from the honest count, and the failure is reported here.
@@ -91,7 +127,7 @@ from results and from the honest count, and the failure is reported here.
 | `excluded_no_apply_url` | integer | Excluded for having no apply URL |
 | `excluded_aggregator_page` | integer | Excluded as a search/listing page |
 | `min_score` | integer | Currently 50 |
-| `geographic_target_met` | boolean | True when ≥7 are `same_state` |
+| `geographic_target_met` | boolean | True when ≥7 are `same_state`. **Currently false on every run** — see Known gaps |
 | `scoring` | object | Nested copy of §1.3 |
 
 `quota_status` is never `full` unless 10 genuinely qualifying items were found.
@@ -101,7 +137,7 @@ from results and from the honest count, and the failure is reported here.
 | Field | Type | Notes |
 |---|---|---|
 | `returned` | integer | What genuinely qualified |
-| `minimum_expected` | integer | 5 |
+| `target` | integer | 8 — what a full list looks like. **Not** a minimum we pad to |
 | `reasons` | string[] | Why the list is short, in plain language |
 | `gaps` | array | `{ skill, postings_requiring, of_postings_analyzed, message }` |
 | `gaps_note` | string | Explains how gaps were derived, or why none are reported |

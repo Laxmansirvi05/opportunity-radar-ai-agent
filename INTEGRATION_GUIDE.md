@@ -5,9 +5,10 @@ integrate without asking us. Field-level detail lives in
 [`API_CONTRACT.md`](API_CONTRACT.md); operational detail in
 [`RUNBOOK.md`](RUNBOOK.md).
 
-> **Read §7 before you ship.** The service currently returns **1–4**
-> opportunities per resume, not the 5–10 the product describes. That is a real
-> limitation, not a temporary blip, and your UI has to handle it.
+> **Read §7 before you ship.** Short result lists are the norm, not an error.
+> Observed live counts range **0–6**. The service tells the student why via
+> `result_tier` and `resume_feedback` — your UI must render those, not treat a
+> short list as a failure.
 
 ---
 
@@ -100,6 +101,38 @@ building UI:
                   "broadened_admitted": 17 }
 }
 ```
+
+### Result tiering — the single most important thing to render
+
+**A short list is a correct outcome, not an error.** The service never pads. It
+always tries to reach 8–10 by broadening first; when it cannot, it tells the
+student why in `resume_feedback`.
+
+| Count | `result_tier` | `status` | `resume_strength` | What to render |
+|---|---|---|---|---|
+| 8–10 | `full` | `ok` | `strong` | Results only. `resume_feedback` is `null` — show no banner |
+| 5–7 | `good` | `partial` | `strong` | Results, plus `resume_feedback` as a light, dismissible tip |
+| 3–4 | `limited` | `weak_profile` | `moderate` | Results, plus `resume_feedback` prominently above or beside them |
+| 1–2 | `very_limited` | `weak_profile` | `needs_work` | Results, plus `resume_feedback` as the primary message |
+| 0 | `none` | `weak_profile` | `needs_work` | No list. `resume_feedback` becomes the whole screen |
+
+**Render `resume_feedback` verbatim.** It is written to be specific and
+constructive, and it already reflects whether the shortfall was the resume or
+our own scoring failing. Do not substitute your own copy, and do not add
+language like "your resume is weak" — the message is deliberately never phrased
+that way.
+
+Practical rules:
+
+- **Switch on `result_tier`, not on `opportunity_count`.** The bands may be
+  retuned; the tier names will not.
+- `status` is a coarse signal for logging. `result_tier` is what the UI should
+  branch on.
+- **Never treat `weak_profile` as an error state.** It is a successful run with
+  a short list. Show the results you got.
+- If `resume_feedback` mentions a problem "on our side", offer a retry button.
+  That text appears only when scoring genuinely failed, and the student's resume
+  is not at fault.
 
 ### Guarantees you can build on
 
@@ -219,10 +252,10 @@ usually worth one retry.
 
 Honest list. These are current, measured, and not hypothetical.
 
-1. **The 5-minimum is not met.** Across five real runs the service returned
-   **4, 4, 1, 1, 1** usable opportunities. Expect `weak_profile` to be the
-   common case, not the exception. Design the UI for 1–4 results first and treat
-   5–10 as the happy path.
+1. **Short lists are the common case.** The 5-minimum has been retired by
+   design: 3–4 real opportunities is now a correct outcome carrying a message.
+   Observed live counts have ranged 0–6. Build the UI for the `limited` and
+   `very_limited` tiers first and treat `full` as the happy path.
 2. **`weak_profile.gaps` is effectively always empty.** The underlying scoring
    model returns posting-side field names ("job description", "location")
    rather than candidate-side skill gaps, and we filter those out rather than

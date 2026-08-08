@@ -223,6 +223,22 @@ nc -z localhost 5432 && echo up || echo DOWN
 docker compose ps
 ```
 
+### Provider quota — how much a run actually costs
+
+Measured across four real runs: **~33 LLM calls and ~68,800 tokens per
+student**, plus ~45 Tavily searches.
+
+| Tier | Budget | Runs/day |
+|---|---|---|
+| Groq free | 100,000 tokens/day | **~1** |
+| Gemini free | 20 requests/day | cannot carry one run (~33 calls) |
+| Paid | — | $0.006–$0.041 per student depending on model |
+
+`node tools/measure-cost.js` recomputes this from any captured run.
+
+The free tier supports roughly **one student per day**. This is a commercial
+limit, not an engineering one — no code change removes it.
+
 ### Tavily quota
 
 The pipeline dies at the search step with *"exceeds your plan's set usage
