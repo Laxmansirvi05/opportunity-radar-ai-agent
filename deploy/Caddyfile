@@ -1,0 +1,32 @@
+# Reverse proxy for the AI Search agent's public entry point.
+#
+# Only job-server (the entry point Opportunity Radar's backend calls) is
+# ever reachable from the internet. ai-gateway (:4000), search-planner
+# (:4200) and render-service (:3100) stay bound to localhost — never add
+# a proxy block for them here.
+#
+# Gated by a shared secret so this isn't an open proxy to job-server
+# either: Opportunity Radar's backend must send the SAME value in
+# INTERNAL_SHARED_SECRET below as an X-Internal-Secret header, or the
+# request never reaches job-server. This is the "shared secret header"
+# AI-FEATURES-HANDOFF.md §2.5 asks for.
+#
+# Replace ai-search.YOURDOMAIN.com with a real domain you control — Caddy
+# provisions and renews the Let's Encrypt cert for it automatically the
+# first time it starts, no manual certbot step. A bare IP address cannot
+# get a real TLS cert; a domain is not optional for the "AI_AGENT_URL
+# should be https://" requirement.
+
+ai-search.YOURDOMAIN.com {
+	@unauthorized not header X-Internal-Secret {$INTERNAL_SHARED_SECRET}
+	respond @unauthorized 403
+
+	reverse_proxy localhost:4300 {
+		# job-server's own poll ceiling is 30 minutes; give the proxy the
+		# same generous timeout so a legitimately long-running submission
+		# isn't cut off at Caddy's default.
+		transport http {
+			read_timeout 35m
+		}
+	}
+}

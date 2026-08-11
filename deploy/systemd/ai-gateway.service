@@ -1,0 +1,17 @@
+[Unit]
+Description=Opportunity Radar - AI Gateway
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/ai-agent/ai-gateway
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/ai-agent/ai-gateway.log
+StandardError=append:/var/log/ai-agent/ai-gateway.log
+
+[Install]
+WantedBy=multi-user.target

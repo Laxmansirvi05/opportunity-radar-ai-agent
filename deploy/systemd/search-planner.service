@@ -1,0 +1,17 @@
+[Unit]
+Description=Opportunity Radar - Search Planner
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/ai-agent/search-planner
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/ai-agent/search-planner.log
+StandardError=append:/var/log/ai-agent/search-planner.log
+
+[Install]
+WantedBy=multi-user.target

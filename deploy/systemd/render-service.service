@@ -1,0 +1,19 @@
+[Unit]
+Description=Opportunity Radar - Render Service (Playwright)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/ai-agent/render-service
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+# Chromium under load is the heaviest single process in this stack — give it
+# room to restart cleanly rather than getting OOM-killed mid-request.
+MemoryMax=2G
+StandardOutput=append:/var/log/ai-agent/render-service.log
+StandardError=append:/var/log/ai-agent/render-service.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Opportunity Radar - Job Server (public entry point)
+After=network.target docker.service ai-gateway.service search-planner.service render-service.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/ai-agent/job-server
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/ai-agent/job-server.log
+StandardError=append:/var/log/ai-agent/job-server.log
+
+[Install]
+WantedBy=multi-user.target
