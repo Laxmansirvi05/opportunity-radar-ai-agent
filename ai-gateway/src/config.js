@@ -24,6 +24,18 @@ function loadConfig(env) {
     min: providerTimeoutMs, max: 180_000, fallback: 120_000
   });
 
+
+/**
+ * Every key configured for a provider, primary first, blanks dropped.
+ * Mirrors the naming Opportunity Radar's own gateway uses (KEY, KEY_2, …) so
+ * the same .env values can be shared between the two services.
+ */
+function keyPool(env, name) {
+  return [env[name], env[`${name}_2`], env[`${name}_3`], env[`${name}_4`]]
+    .map((v) => (typeof v === "string" ? v.trim() : v))
+    .filter(Boolean);
+}
+
   return Object.freeze({
     port: integer("PORT", env.PORT, { min: 1, max: 65_535, fallback: 4000 }),
     gatewayApiKey: required("GATEWAY_API_KEY", env.GATEWAY_API_KEY),
@@ -37,6 +49,7 @@ function loadConfig(env) {
     providers: Object.freeze({
       groq: Object.freeze({
         apiKey: required("GROQ_API_KEY", env.GROQ_API_KEY),
+        apiKeys: keyPool(env, "GROQ_API_KEY"),
         // llama-3.3-70b-versatile was retired by Groq — the API now answers
         // 404 model_not_found for it, which surfaced as PROVIDER_MODEL_UNAVAILABLE
         // and knocked Groq out of the failover chain entirely. With Gemini's
@@ -51,10 +64,12 @@ function loadConfig(env) {
       }),
       gemini: Object.freeze({
         apiKey: required("GEMINI_API_KEY", env.GEMINI_API_KEY),
+        apiKeys: keyPool(env, "GEMINI_API_KEY"),
         model: env.GEMINI_MODEL || "gemini-flash-latest"
       }),
       openrouter: Object.freeze({
         apiKey: required("OPENROUTER_API_KEY", env.OPENROUTER_API_KEY),
+        apiKeys: keyPool(env, "OPENROUTER_API_KEY"),
         model: env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free"
       })
     })

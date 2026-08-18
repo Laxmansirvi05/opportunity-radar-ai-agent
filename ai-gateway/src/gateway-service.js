@@ -48,6 +48,9 @@ class GatewayService {
             });
           }
           this.logger.info("provider_succeeded", { requestId, provider: provider.name, attempt: attempt + 1 });
+          // Back to the primary key, so one transient 429 does not strand this
+          // provider on its last spare for the rest of the process.
+          if (typeof provider.resetKey === "function") provider.resetKey();
           return { text };
         } catch (error) {
           const failure = toGatewayError(error);
@@ -59,9 +62,29 @@ class GatewayService {
             code: failure.code,
             retryable: failure.retryable
           });
-          // Move on immediately: another provider may be healthy, and every
-          // retry here spends budget from the window we would be waiting on.
           if (failure.rateLimited) {
+            // A rate limit or quota is per-KEY, so try the next key on this
+            // provider before giving up on the provider itself. Retrying the
+            // same key would fail for the same reason, and failing over to
+            // another provider abandons capacity we still have. Costs nothing
+            // when only one key is configured, since rotateKey() returns false.
+            if (typeof provider.rotateKey === "function" && provider.rotateKey()) {
+              this.logger.info("provider_key_rotated", {
+                requestId,
+                provider: provider.name,
+                keyIndex: provider.keyIndex + 1,
+                keyCount: provider.apiKeys.length
+              });
+              // Rotations must not spend the retry budget: with 4 keys and
+              // maxRetries 3, counting each rotation as an attempt would run
+              // out of loop before running out of keys, and the last key would
+              // never be tried at all.
+              attempt -= 1;
+              continue;
+            }
+            // Every key on this provider is spent. Move on immediately:
+            // another provider may be healthy, and every retry here spends
+            // budget from the window we would be waiting on.
             if (!rateLimited.includes(provider)) rateLimited.push(provider);
             break;
           }
