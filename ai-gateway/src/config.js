@@ -37,7 +37,17 @@ function loadConfig(env) {
     providers: Object.freeze({
       groq: Object.freeze({
         apiKey: required("GROQ_API_KEY", env.GROQ_API_KEY),
-        model: env.GROQ_MODEL || "llama-3.3-70b-versatile"
+        // llama-3.3-70b-versatile was retired by Groq — the API now answers
+        // 404 model_not_found for it, which surfaced as PROVIDER_MODEL_UNAVAILABLE
+        // and knocked Groq out of the failover chain entirely. With Gemini's
+        // free-tier quota also spent, that left no working provider and every
+        // pipeline run died at "Message a model" with a 504.
+        //
+        // openai/gpt-oss-120b is the strongest chat model this key can reach
+        // (verified against /v1/models) and returns clean JSON. qwen/qwen3.6-27b
+        // was the other candidate but emits <think> reasoning traces that would
+        // break JSON parsing downstream.
+        model: env.GROQ_MODEL || "openai/gpt-oss-120b"
       }),
       gemini: Object.freeze({
         apiKey: required("GEMINI_API_KEY", env.GEMINI_API_KEY),
