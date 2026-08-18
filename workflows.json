@@ -459,7 +459,7 @@
               },
               {
                 "name": "input",
-                "value": "={{$json.clean_text ? $json.clean_text.substring(0, 18000) : ($json.main_content ? $json.main_content.substring(0, 18000) : \"\")}}"
+                "value": "={{$json.main_content ? $json.main_content.substring(0, 18000) : ($json.clean_text ? $json.clean_text.substring(0, 18000) : \"\")}}"
               }
             ]
           },
