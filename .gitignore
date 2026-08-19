@@ -43,3 +43,8 @@ live-runs/
 test-resumes/
 job-server/node_modules/
 test_output.json
+*_output.txt
+*_output.json
+*_run.txt
+n8n_output.*
+parse_output.js
