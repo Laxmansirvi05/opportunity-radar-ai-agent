@@ -31,7 +31,7 @@ function loadConfig(env) {
  * the same .env values can be shared between the two services.
  */
 function keyPool(env, name) {
-  return [env[name], env[`${name}_2`], env[`${name}_3`], env[`${name}_4`]]
+  return [env[name], env[`${name}_2`], env[`${name}_3`], env[`${name}_4`], env[`${name}_5`], env[`${name}_6`]]
     .map((v) => (typeof v === "string" ? v.trim() : v))
     .filter(Boolean);
 }
