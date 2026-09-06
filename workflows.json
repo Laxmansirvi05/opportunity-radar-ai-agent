@@ -100,19 +100,11 @@
       {
         "parameters": {
           "method": "POST",
-          "url": "https://api.tavily.com/search",
-          "sendHeaders": true,
-          "headerParameters": {
-            "parameters": [
-              {
-                "name": "Authorization",
-                "value": "={{ $env.TAVILY_API_KEY }}"
-              }
-            ]
-          },
+          "url": "http://localhost:4200/discovery/search",
+          "sendHeaders": false,
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ {\n  query: $json.query,\n  search_depth: \"advanced\",\n  max_results: 5,\n  include_answer: false,\n  include_raw_content: false,\n  include_images: false\n} }}",
+          "jsonBody": "={{ { query: $json.query } }}",
           "options": {}
         },
         "type": "n8n-nodes-base.httpRequest",

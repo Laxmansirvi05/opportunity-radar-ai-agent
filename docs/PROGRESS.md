@@ -149,3 +149,24 @@ requirements and existing `search-planner` implementation. Before writing
 custom provider code, inspect the JobSpy, SearxNG, TinyFish, and
 SimplifyJobs integration surfaces and record any real external-key blocker in
 `docs/NEEDS_FROM_HUMAN.md` while keeping an optional stub/fallback.
+
+### Entry 5 — Phase 3 free-first provider layer (current commit)
+
+Added `POST /discovery/search` to the existing search-planner service and
+rewired n8n's former hard-coded Tavily node to use it. The provider layer is
+free-first and normalized: SearxNG is the default when self-hosted, JobSpy is
+an optional self-hosted structured connector with LinkedIn explicitly omitted,
+TinyFish is optional behind its free key, and SimplifyJobs is a public curated
+supplement. A failed provider is reported but cannot fail the remaining ones.
+Tavily is no longer on the required discovery path.
+
+Files touched: `search-planner/src/discovery-providers.js`,
+`search-planner/src/server.js`, `search-planner/test/discovery-providers.test.js`,
+`search-planner/package.json`, `workflows.json`, `.env.example`.
+Test status: `npm --prefix search-planner test` (80/80 pass),
+`npm --prefix search-planner run check` (pass), workflow config inspection
+(n8n search node targets `/discovery/search`).
+
+RESUME FROM HERE: commit and push Entry 5, then begin Phase 4 by adding
+Readability + jsdom content extraction, robots.txt checking and per-domain
+rate limiting around the existing direct-fetch/render branches.

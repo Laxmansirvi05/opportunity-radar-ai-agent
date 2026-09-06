@@ -10,8 +10,8 @@
   },
   "scripts": {
     "start": "node src/server.js",
-    "check": "node --check src/config.js && node --check src/normalizers/title-normalizer.js && node --check src/normalizers/skill-normalizer.js && node --check src/normalizers/location-normalizer.js && node --check src/query-builder.js && node --check src/opportunity-type.js && node --check src/search-planner.js && node --check src/index.js",
-    "test": "GATEWAY_API_KEY=test-key node --test test/normalizers.test.js test/query-builder.test.js test/opportunity-type.test.js test/search-planner.test.js"
+    "check": "node --check src/config.js && node --check src/discovery-providers.js && node --check src/server.js && node --check src/normalizers/title-normalizer.js && node --check src/normalizers/skill-normalizer.js && node --check src/normalizers/location-normalizer.js && node --check src/query-builder.js && node --check src/opportunity-type.js && node --check src/search-planner.js && node --check src/index.js",
+    "test": "GATEWAY_API_KEY=test-key node --test test/*.test.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

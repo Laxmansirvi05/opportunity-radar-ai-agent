@@ -2,6 +2,7 @@
 
 const express = require('express');
 const { buildSearchPlan, composeSearchPlan, SearchPlanError } = require('./search-planner');
+const { searchFreeFirst } = require('./discovery-providers');
 
 // Injected lazily to avoid circular-require during unit tests.
 let _repo = null;
@@ -18,6 +19,19 @@ app.use(express.json({ limit: '5mb' }));
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
+});
+
+// n8n's discovery node calls this instead of a hard-coded paid provider.
+// Individual free providers are optional; a temporary outage is reported in
+// `providers` while the remaining providers still supply results.
+app.post('/discovery/search', async (req, res) => {
+  const query = typeof req.body?.query === 'string' ? req.body.query.trim() : '';
+  if (!query) return res.status(400).json({ error: { code: 'INVALID_INPUT', message: 'query is required' } });
+  try {
+    return res.status(200).json(await searchFreeFirst(query));
+  } catch (error) {
+    return res.status(502).json({ error: { code: 'DISCOVERY_UNAVAILABLE', message: error.message } });
+  }
 });
 
 /**
