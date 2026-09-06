@@ -195,11 +195,15 @@ function classifyTrust(listing) {
     trustScore -= 0.3;
     fraudFlagged = true;
   } else if (domainCheck.reason === 'missing_data' || domainCheck.reason === 'invalid_url') {
-    trustScore -= 0.1;
+    trustScore -= 0.15;
   }
 
-  // Completeness
-  trustScore -= (1 - completeness.score) * 0.3;
+  // Completeness — weight increased so sparse listings can't slip through.
+  // Missing *required* fields (title/company/description) are an automatic
+  // needs_review floor regardless of final score.
+  const missingRequired = completeness.missing.filter((f) =>
+    (loadConfig().description_completeness.required_signals || []).includes(f));
+  trustScore -= (1 - completeness.score) * 0.5;
 
   trustScore = Math.max(0, Math.min(1, trustScore));
 
@@ -207,7 +211,7 @@ function classifyTrust(listing) {
   let verdict;
   if (scamFlagged || trustScore < 0.3) {
     verdict = 'excluded';
-  } else if (fraudFlagged || trustScore < 0.6) {
+  } else if (fraudFlagged || trustScore < 0.6 || missingRequired.length > 0) {
     verdict = 'needs_review';
   } else {
     verdict = 'trusted';
