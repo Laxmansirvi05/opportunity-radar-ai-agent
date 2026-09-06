@@ -208,3 +208,18 @@ to execute; Docker availability remains in `NEEDS_FROM_HUMAN.md` item 1.
 
 RESUME FROM HERE: commit and push Entry 7, then implement Phase 6 fuzzy and
 semantic duplicate detection against the existing `content_hash` data path.
+
+### Entry 8 — Phase 6 duplicate detector (current commit)
+
+Added `fast-fuzzy` title/company matching on top of existing exact
+`content_hash` and apply-URL checks, plus a local-pgvector similarity threshold
+hook for the embedding query result. It returns an audit-friendly reason for
+each collapse and does not replace the existing exact dedup path.
+
+Files touched: `data/src/duplicate-detector.js`, `data/test/duplicate-detector.test.js`,
+`data/package.json`, `data/package-lock.json`.
+Test status: `npm --prefix data test` (2/2 pass), `npm --prefix data run check`
+(pass), `git diff --check` (pass).
+
+RESUME FROM HERE: commit and push Entry 8, then implement Phase 7 trust/fraud
+classification using editable rules and existing fraud/scam columns.
