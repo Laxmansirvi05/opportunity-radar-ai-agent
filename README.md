@@ -103,6 +103,18 @@ npx n8n import:workflow --input=workflows.json
 Full operating guide, health checks, and failure diagnosis:
 [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
+## 🔎 Local verification
+
+Before changing the n8n workflow or any service contract, run the repository verification checks:
+
+```bash
+node tools/verify-workflow-config.js
+node tools/verify-contract.js
+```
+
+Use the first check for workflow invariants and the second to catch API response-contract drift. For changes that affect a running service, also exercise its health endpoint from the runbook before deploying.
+
+
 ## API
 
 Submit a resume and poll for results:
