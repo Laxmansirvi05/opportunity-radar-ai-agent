@@ -63,7 +63,8 @@ async function upsertOpportunity({
      ON CONFLICT (content_hash) DO UPDATE
        SET status           = 'active',
            updated_at       = now(),
-           last_verified_at = now()
+           last_verified_at = now(),
+           verification_failures = 0
      RETURNING id,
                (xmax = 0) AS is_new`,
     [
@@ -116,12 +117,12 @@ async function getOpportunityById(id) {
  *
  * @param {number} days
  * @param {number} limit
- * @returns {Promise<Array<{ id: string, apply_url: string }>>}
+ * @returns {Promise<Array<{ id: string, apply_url: string, verification_failures: number }>>}
  */
 async function getStaleOpportunities(days, limit = 10) {
   const pool = getPool();
   const { rows } = await pool.query(
-    `SELECT id, apply_url FROM opportunities 
+    `SELECT id, apply_url, verification_failures FROM opportunities 
      WHERE status = 'active' 
        AND (last_verified_at IS NULL OR last_verified_at < now() - interval '1 day' * $1)
      ORDER BY last_verified_at ASC NULLS FIRST
@@ -132,19 +133,20 @@ async function getStaleOpportunities(days, limit = 10) {
 }
 
 /**
- * Update the verification timestamp and status.
+ * Update the verification timestamp, status, and failure count.
  *
  * @param {string} id
  * @param {string} status - e.g. 'active' or 'expired'
+ * @param {number} [failures=0] - number of consecutive failures
  * @returns {Promise<void>}
  */
-async function updateVerification(id, status) {
+async function updateVerification(id, status, failures = 0) {
   const pool = getPool();
   await pool.query(
     `UPDATE opportunities 
-     SET status = $1, last_verified_at = now(), updated_at = now()
+     SET status = $1, last_verified_at = now(), updated_at = now(), verification_failures = $3
      WHERE id = $2`,
-    [status, id]
+    [status, id, failures]
   );
 }
 

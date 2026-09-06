@@ -1,0 +1,1 @@
+ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS verification_failures INTEGER NOT NULL DEFAULT 0;
