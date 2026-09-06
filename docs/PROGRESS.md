@@ -268,9 +268,30 @@ patterns are hard excludes (scam_flagged=true); MLM/suspicious-TLD are soft
 signals (fraud_flagged=true, needs_review). Maps directly to existing
 `opportunities.fraud_flagged`, `scam_flagged`, and `status` columns.
 
+**Design Decision — domain-org mismatch severity:** A domain-org mismatch
+(e.g. company="Google" but apply_url on `quickjobs-apply.xyz`) classifies as
+`needs_review`, NOT `excluded`, even though it is a potential impersonation
+pattern. This is deliberate:
+- **False exclusion is worse than false flagging** for students — missing a
+  real opportunity because a hiring partner's domain didn't match is a worse
+  outcome than a reviewer checking one extra flagged listing.
+- **Domain mismatches are genuinely ambiguous.** Companies routinely use
+  third-party ATS domains that don't match their name. We whitelist the major
+  ones (Greenhouse, Lever, Workday, etc.), but smaller/newer ATS providers
+  would produce false positives if domain mismatch auto-excluded.
+- **The suspicious TLD is the real fraud signal**, not the name mismatch
+  itself. A `.xyz`/`.buzz` domain is what makes it suspicious; the same
+  listing on `google-partner-hiring.com` would pass as `trusted`/`neutral`.
+- **No "well-known company" registry** exists in the system. Distinguishing
+  "Google" from "RandomStartup" would require a fragile brand list.
+- `needs_review` already means "segregated from the primary result set" per
+  PDF §11 — the student never sees it unless a human reviewer approves it.
+
+If a future phase adds a brand registry or community-reported fraud list,
+domain-org mismatch on a confirmed brand could be escalated to `excluded`.
+
 Files touched: `data/src/trust-screener.js`, `data/config/trust-patterns.json`,
 `data/test/trust-screener.test.js`.
 Test status: `npm --prefix data test` (13/13 pass).
 
-RESUME FROM HERE: commit and push Entry 11, then implement Phase 8 (Freshness
-& Recency Verification).
+RESUME FROM HERE: implement Phase 8 (Freshness & Recency Verification).
