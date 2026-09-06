@@ -199,6 +199,8 @@ domains ahead of official ATS domains, then third-party sources. This provides
 the safe cached domain foundation for future search/browser escalation without
 scraping a prohibited source.
 
+**Design Decision Documented:** The `official_ats` tier (Workday, Greenhouse, Lever, etc.) is explicitly trusted and ordered immediately after `official_company`, since these domains are genuinely employer-hosted and serve authoritative canonical roles, separating them from unreliable `third_party` aggregators.
+
 Files touched: `data/migrations/014_org_registry.sql`,
 `data/src/canonical-link-resolver.js`, `data/test/canonical-link-resolver.test.js`,
 `data/package.json`.
@@ -223,3 +225,52 @@ Test status: `npm --prefix data test` (2/2 pass), `npm --prefix data run check`
 
 RESUME FROM HERE: commit and push Entry 8, then implement Phase 7 trust/fraud
 classification using editable rules and existing fraud/scam columns.
+
+### Entry 9 — OmniRoute and Free-Tier Model Configuration
+
+Discovered a critical constraint during OmniRoute verification: OmniRoute does not natively intercept and block paid models globally. If a component (like `ai-gateway`) requests `openrouter/auto`, OpenRouter will route to paid flagship models and fail with 402 Insufficient Credits if the account has no balance.
+
+**Permanent Constraint:** `openrouter/auto` or any non-`:free` suffixed model string must NEVER be used in `ai-gateway` or any other service routing through OmniRoute, as it breaks the "free-first, no paid keys" project requirement. We updated `ai-gateway` (`src/config.js` and `src/providers/index.js`) to hardcode a fallback chain of strictly `:free` models (`openrouter/liquid/lfm-2.5-2.6b:free`, etc.) to prevent silent regressions and ensure the pipeline remains strictly free.
+
+### Entry 10 — Phase 3-6 End-to-End Verification
+
+Verified all Phase 3-6 components with real data:
+
+- **SearxNG** installed via colima/docker, running on port 8888 with JSON output
+  enabled. Returns 31 relevant results for "Frontend Developer Intern Hyderabad".
+- **SimplifyJobs bug fixed:** was using `terms.some()` (match ANY query word)
+  instead of `terms.every()` (match ALL), returning unrelated listings. Fixed;
+  now correctly returns 0 for queries with no matching listings.
+- **LinkedIn blocking hardened:** `in.linkedin.com`, `uk.linkedin.com` and all
+  country subdomains now correctly blocked via suffix-based domain matching.
+- **Duplicate detector rewritten:** symmetric fuzzy scoring eliminates
+  false positives from fast-fuzzy's substring bias; corporate suffix stripping
+  (Corp/Corporation/Technologies/Services/etc.) and title synonym canonicalization
+  (intern/internship, engineer/engineering) handle real-world variations.
+  Stress-tested against 8 edge cases (5 false-positive rejections, 3 true-positive
+  collapses) — all pass.
+- **`official_ats` tier** formally documented in Implementation Plan and here.
+
+### Entry 11 — Phase 7 Trust & Fraud Screening Gate (current commit)
+
+Built the three-signal trust classifier per PDF §9/§11:
+
+1. **Keyword/pattern heuristics** — payment requests, credential harvesting,
+   unrealistic offers, and MLM/pyramid language detected via regex patterns
+   loaded from an external editable config (`data/config/trust-patterns.json`).
+2. **Domain-org consistency** — trusted ATS domains pass automatically;
+   company-name-in-domain check; suspicious TLDs (.xyz, .buzz, etc.) flagged.
+3. **Description completeness** — missing required fields (title, company,
+   description) penalize heavily; missing quality fields penalize lightly.
+
+Three-way output: `trusted` / `needs_review` / `excluded`. Payment/credential
+patterns are hard excludes (scam_flagged=true); MLM/suspicious-TLD are soft
+signals (fraud_flagged=true, needs_review). Maps directly to existing
+`opportunities.fraud_flagged`, `scam_flagged`, and `status` columns.
+
+Files touched: `data/src/trust-screener.js`, `data/config/trust-patterns.json`,
+`data/test/trust-screener.test.js`.
+Test status: `npm --prefix data test` (13/13 pass).
+
+RESUME FROM HERE: commit and push Entry 11, then implement Phase 8 (Freshness
+& Recency Verification).

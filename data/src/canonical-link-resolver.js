@@ -1,10 +1,11 @@
 'use strict';
 const OFFICIAL_ATS = ['greenhouse.io', 'lever.co', 'ashbyhq.com', 'workdayjobs.com', 'myworkdayjobs.com', 'smartrecruiters.com'];
-const BLOCKED_HOSTS = ['linkedin.com', 'www.linkedin.com'];
+const BLOCKED_DOMAINS = ['linkedin.com'];
 function hostname(url) { try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); } catch { return ''; } }
+function isBlocked(host) { return BLOCKED_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`)); }
 function tier(url, company, registry = null) {
   const host = hostname(url);
-  if (!host || BLOCKED_HOSTS.includes(host)) return 'blocked';
+  if (!host || isBlocked(host)) return 'blocked';
   if (OFFICIAL_ATS.some((domain) => host === domain || host.endsWith(`.${domain}`))) return 'official_ats';
   const domains = registry?.official_domains || [];
   if (domains.some((domain) => host === domain || host.endsWith(`.${domain}`))) return 'official_company';

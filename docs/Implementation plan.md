@@ -234,7 +234,7 @@ CREATE TABLE opportunities (
   country TEXT,
   is_remote BOOLEAN DEFAULT FALSE,
   apply_url TEXT NOT NULL,
-  apply_url_tier TEXT NOT NULL, -- official_company | official_government | official_university | trusted_third_party
+  apply_url_tier TEXT NOT NULL, -- official_company | official_ats | official_government | official_university | trusted_third_party
   description TEXT,
   eligibility_notes TEXT,
   status TEXT DEFAULT 'active', -- active | stale | closed | suspicious
@@ -402,7 +402,7 @@ CREATE TABLE run_logs (
 3. **If both of the above fail to produce a confident match** (e.g., the org's career site uses a non-obvious ATS domain, or the specific role isn't directly linkable from a search hit): escalate to a `browser-use` agent (same free local-LLM-backed service from Phase 4) with a narrow task like *"go to {org_name}'s official careers page and find the direct application link for the {role} posting"* — this mirrors what a human would actually do and is a better fit for PDF §8 than pattern-matching search results, at the cost of being slower, so reserve it for cases 1–2 couldn't resolve.
 4. Maintain a growing **org-name → official-domain registry** in Postgres (new small table or reuse `org_domain` on `opportunities`), populated as you resolve links via any of the three strategies above — this cache reduces repeated search/agent cost over time and improves accuracy as the dataset grows.
 5. **Fully resolve redirect chains** (follow HTTP redirects to their final destination, verify final status is 200) before accepting a URL as the `apply_url`.
-6. Tag every resolved link with `apply_url_tier` per the PDF §8 priority order (official_company > official_government > official_university > trusted_third_party).
+6. Tag every resolved link with `apply_url_tier` per the PDF §8 priority order (official_company > official_ats > official_government > official_university > trusted_third_party).
 
 **Tasks:**
 - [ ] Add `org_registry` table (or extend `opportunities.org_domain`) for the caching mechanism.

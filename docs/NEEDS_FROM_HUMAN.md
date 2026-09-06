@@ -16,61 +16,31 @@ longer needed.
 
 ---
 
-## 1. Docker daemon not available on this machine — `OPEN`
+## 1. Docker daemon not available on this machine — `DONE`
 
-**What's needed:** a working Docker daemon (Docker Desktop or colima) on the
-dev machine.
+**Resolved:** colima + docker CLI installed via `brew install colima docker &&
+colima start`. SearxNG container is running on port 8888 with JSON output
+enabled.
 
-**Why:** `docker` is not on `PATH` here and no daemon is reachable. The plan
-calls for SearxNG (Phase 3) and optionally `jobspy-api` and `browser-use`
-(Phases 3–5) to run as containers via `docker-compose.yml`. The agent can
-write those compose entries, but cannot start or verify them.
-
-**How to get it:**
-
-```bash
-brew install --cask docker
-```
-
-Then launch Docker Desktop once and confirm with `docker ps`. A lighter
-alternative that also works:
-
-```bash
-brew install colima docker && colima start
-```
-
-**Agent workaround in place:** provider layer treats every external search
-backend as optional and probes availability at call time, so a missing
-SearxNG container degrades to the next provider instead of failing the run.
-Not blocking any other task.
+> **Reboot note:** colima does not auto-start after a machine reboot. Run
+> `colima start` after each restart, then
+> `docker start <searxng-container-id>` (or re-run the docker command below)
+> to bring SearxNG back. Same category as OmniRoute's `omniroute` needing a
+> manual restart.
+>
+> ```bash
+> colima start
+> docker run -d -p 8888:8080 -v "/Users/laxmansirvi/ai  agent /default-settings.yml":/etc/searxng/settings.yml searxng/searxng
+> ```
 
 ---
 
-## 2. SearxNG instance URL — `OPEN`
+## 2. SearxNG instance URL — `DONE`
 
-**What's needed:** a reachable SearxNG base URL in `SEARXNG_BASE_URL`, with
-JSON output enabled.
-
-**Why:** SearxNG is the plan's default free search backend for Phase 3
-(everything JobSpy doesn't cover: government portals, university pages,
-company career pages). It needs either a local container (see item 1) or a
-public instance that permits the JSON API — most public instances disable
-`format=json`, so self-hosting is the realistic path.
-
-**How to get it:** once item 1 is resolved, the agent-written compose service
-covers it and the URL is `http://localhost:8080`. To confirm JSON output is
-on:
-
-```bash
-curl -s 'http://localhost:8080/search?q=test&format=json' | head -c 200
-```
-
-If that returns HTML rather than JSON, add `- json` under `search.formats` in
-the SearxNG `settings.yml`.
-
-**Agent workaround in place:** the SearxNG provider is written and unit-tested
-against recorded fixtures, and reports itself unavailable when
-`SEARXNG_BASE_URL` is unset, so discovery falls through to other providers.
+**Resolved:** `SEARXNG_BASE_URL=http://localhost:8888` is set in `.env`.
+SearxNG is running via colima/docker on port 8888 with a custom
+`settings.yml` that enables `format=json`. Verified working: returns 31
+relevant results for a real "Frontend Developer Intern Hyderabad" query.
 
 ---
 
@@ -118,3 +88,35 @@ ollama pull llama3.1:8b && ollama pull nomic-embed-text
 **Agent workaround in place:** the Ollama provider is registered in the
 gateway but never chosen unless `OLLAMA_BASE_URL` is set and a health probe
 passes, so the existing hosted chain is untouched.
+
+---
+
+## 5. `git push` to GitHub is blocked from the agent sandbox — `OPEN`
+
+**What's needed:** either the human runs `git push origin main` periodically,
+or `github.com:443` is allowed for this session's sandbox.
+
+**Why:** the standing directive is commit **and push** after every meaningful
+change. Commits are landing fine, but the push fails:
+
+```
+fatal: unable to access 'https://github.com/Laxmansirvi05/opportunity-radar-ai-agent.git/':
+CONNECT tunnel failed, response 403
+deny network-outbound github.com:443 (user denied)
+```
+
+The remote itself is configured correctly (`git remote -v` resolves to
+`Laxmansirvi05/opportunity-radar-ai-agent`), so this is a sandbox egress
+policy, not a repo problem.
+
+**How to resolve:** run this in a normal terminal whenever convenient — every
+agent commit is already local and pushes cleanly in one go:
+
+```bash
+git push origin main
+```
+
+**Agent workaround in place:** work continues and every step is still
+committed locally with its own conventional-style message, so nothing is lost
+and the whole batch pushes as normal history later. The agent will note in
+each PROGRESS entry that the commit is local-only.

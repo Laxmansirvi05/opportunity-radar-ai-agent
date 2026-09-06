@@ -92,7 +92,7 @@ function simplifyJobs({ listingsUrl = process.env.SIMPLIFYJOBS_LISTINGS_URL || '
       const terms = query.toLowerCase().split(/\W+/).filter((term) => term.length > 2).slice(0, 8);
       return listings.filter((listing) => {
         const haystack = `${listing.title || listing.role || ''} ${listing.company || ''} ${listing.location || ''}`.toLowerCase();
-        return terms.some((term) => haystack.includes(term));
+        return terms.every((term) => haystack.includes(term));
       }).slice(0, 10).map((listing) => result({
         title: listing.title || listing.role,
         url: listing.url || listing.apply_url || listing.link,
