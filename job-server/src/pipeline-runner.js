@@ -14,6 +14,7 @@
  */
 
 const { spawn } = require('node:child_process');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -25,6 +26,48 @@ const path = require('node:path');
 const N8N_FILE = process.env.RESUME_INPUT_PATH
   || path.join(os.homedir(), '.n8n-files', 'resume-input.pdf');
 const WORKFLOW_ID = '3bwLRC7IC0yDFog7';
+
+function apiKeyFingerprint(apiKey) {
+  return crypto.createHash('sha256').update(apiKey).digest('hex');
+}
+
+/**
+ * Verify the n8n render-service credential before starting a costly run.
+ *
+ * The workflow passes RENDER_SERVICE_API_KEY to POST /fetch. A bad value used
+ * to be hidden by the node's continue-on-error setting, producing blank pages
+ * for every JS-rendered posting. The renderer's health endpoint exposes only a
+ * SHA-256 fingerprint of its configured API_KEY, never the secret itself.
+ */
+async function assertRenderServiceAuth({
+  renderServiceUrl = process.env.RENDER_SERVICE_URL || 'http://127.0.0.1:3100',
+  renderServiceApiKey = process.env.RENDER_SERVICE_API_KEY,
+  requestHealth = async (url) => {
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    let body;
+    try { body = await response.json(); } catch { body = null; }
+    return { status: response.status, body };
+  },
+} = {}) {
+  if (!renderServiceApiKey) {
+    throw new Error('render-service preflight failed: RENDER_SERVICE_API_KEY is missing; it must match render-service API_KEY');
+  }
+
+  let health;
+  try {
+    health = await requestHealth(new URL('/health', renderServiceUrl).toString());
+  } catch (error) {
+    throw new Error(`render-service preflight failed: cannot reach ${renderServiceUrl}/health (${error.message})`);
+  }
+
+  const auth = health?.body?.auth;
+  if (health?.status !== 200 || !auth?.enabled || !auth.apiKeyFingerprint) {
+    throw new Error('render-service preflight failed: renderer has no API_KEY-enabled health identity; configure render-service API_KEY before running n8n');
+  }
+  if (auth.apiKeyFingerprint !== apiKeyFingerprint(renderServiceApiKey)) {
+    throw new Error('render-service preflight failed: RENDER_SERVICE_API_KEY does not match render-service API_KEY; refusing to start a run that would return 401/empty rendered pages');
+  }
+}
 
 /**
  * Pull the Build Response payload out of an n8n CLI execution dump.
@@ -76,7 +119,8 @@ function extractResponse(stdout) {
 }
 
 function createCliRunner({ repoRoot, timeoutMs = 15 * 60 * 1000, maxStdoutBytes = 512 * 1024 * 1024, logger = console } = {}) {
-  return function runPipeline(job) {
+  return async function runPipeline(job) {
+    await assertRenderServiceAuth();
     return new Promise((resolve, reject) => {
       try {
         fs.mkdirSync(path.dirname(N8N_FILE), { recursive: true });
@@ -181,4 +225,4 @@ function createStubRunner({ response, fromFile, delayMs = 0, throws = null } = {
   };
 }
 
-module.exports = { createCliRunner, createStubRunner, extractResponse };
+module.exports = { createCliRunner, createStubRunner, extractResponse, assertRenderServiceAuth };

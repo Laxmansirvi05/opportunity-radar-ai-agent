@@ -95,3 +95,47 @@ that reproduces `splitInBatches → If → {extra node, direct} → reconverge �
 back to loop` with no network calls, run it at `batchSize` 1 and 5 under
 `N8N_USER_FOLDER=$TMPDIR/...`, and record how many times the done-branch node
 executes in each case. That measurement is Fix A's evidence.
+
+### Entry 2 — Fix A completed (commit `903cadf`, local-only)
+
+Completed the real-node topology probe as `test/workflow/loop-batching.test.js`.
+It runs against installed n8n's `SplitInBatchesV3`: batch size 1 emits one
+complete done branch, while a controlled batch size 5 fan-in emits multiple
+partial done branches. The workflow guard pins `Loop Over Items` to batch size
+1 and verifies the two unmerged fan-ins remain explicit. `extractResponse()`
+now returns the last `Build Response` run as defence in depth, rather than a
+partial first emission.
+
+Files touched: `workflows.json`, `job-server/src/pipeline-runner.js`,
+`job-server/test/pipeline-runner.test.js`, `test/workflow/loop-batching.test.js`.
+Test status: `node --test test/workflow/loop-batching.test.js` (6/6 pass),
+`npm --prefix job-server test` (25/25 pass at the time).
+
+Push status: local-only; sandbox GitHub egress block is tracked in
+`docs/NEEDS_FROM_HUMAN.md` item 5.
+
+### Entry 3 — Fix B completed (current commit, local-only)
+
+Confirmed the mismatch was once real (the workflow used `GATEWAY_API_KEY`;
+commit `616334a` corrected it to `RENDER_SERVICE_API_KEY`) and remains
+possible because n8n's root `.env` and render-service's `.env` are separate.
+Added a preflight before every real n8n invocation: job-server fetches
+render-service `/health`, compares the SHA-256 fingerprint of its configured
+`API_KEY` with the `RENDER_SERVICE_API_KEY` n8n will send, and fails before
+the expensive pipeline can silently turn 401s into empty pages. The plaintext
+secret is never exposed. Missing or disabled renderer auth also fails loudly.
+
+Files touched: `job-server/src/pipeline-runner.js`,
+`job-server/test/render-service-preflight.test.js`, `render-service/src/auth.js`,
+`render-service/src/routes/health.js`, `.env.example`.
+Test status: `npm --prefix job-server test` (28/28 pass),
+`npm --prefix job-server run check` (pass), render-service module load (pass),
+`git diff --check` (pass).
+
+Push status: local-only; sandbox GitHub egress block is tracked in
+`docs/NEEDS_FROM_HUMAN.md` item 5.
+
+RESUME FROM HERE: commit the Fix B render-service authentication preflight
+with only the files listed in Entry 3 plus this append-only progress update,
+attempt the required push, then begin Phase 3 by reading the plan's provider
+interface requirements and the existing search-planner implementation.
