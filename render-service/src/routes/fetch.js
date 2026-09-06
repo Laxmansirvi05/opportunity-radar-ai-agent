@@ -6,6 +6,7 @@ const config = require('../config');
 const logger = require('../logger');
 const requestQueue = require('../requestQueue');
 const { renderWithRetries } = require('../renderer');
+const { assertFetchAllowed, scheduleByDomain } = require('../fetch-policy');
 const { ValidationError, RenderTimeoutError } = require('../errors');
 
 const router = express.Router();
@@ -142,12 +143,14 @@ router.post('/fetch', async (req, res, next) => {
     const url = validateUrl(req.body && req.body.url);
     logger.info('Fetch request received', { url });
 
+    await assertFetchAllowed(url);
+
     // SSRF defense-in-depth: block hosts that resolve to internal addresses.
     if (config.blockPrivateNetworkTargets) {
       await assertNoPrivateResolution(new URL(url).hostname);
     }
 
-    const result = await renderWithOverallTimeout(url);
+    const result = await scheduleByDomain(url, () => renderWithOverallTimeout(url));
     const renderTimeMs = Date.now() - startedAt;
 
     logger.info('Fetch request completed', { url, status: result.status, renderTimeMs });
@@ -159,6 +162,7 @@ router.post('/fetch', async (req, res, next) => {
       title: result.title,
       status: result.status,
       html: result.html,
+      mainContent: result.mainContent,
       renderedAt: new Date().toISOString(),
       renderTimeMs,
       redirected: result.redirected,

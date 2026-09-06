@@ -7,14 +7,20 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "NODE_ENV=development node src/index.js",
+    "test": "node --test test/*.test.js",
+    "check": "node --check src/*.js && node --check src/routes/*.js",
     "postinstall": "playwright install --with-deps chromium"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "bottleneck": "^2.19.5",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
-    "playwright": "^1.46.0"
+    "jsdom": "^26.1.0",
+    "playwright": "^1.46.0",
+    "robots-parser": "^3.0.1"
   }
 }

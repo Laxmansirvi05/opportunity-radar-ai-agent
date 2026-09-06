@@ -170,3 +170,23 @@ Test status: `npm --prefix search-planner test` (80/80 pass),
 RESUME FROM HERE: commit and push Entry 5, then begin Phase 4 by adding
 Readability + jsdom content extraction, robots.txt checking and per-domain
 rate limiting around the existing direct-fetch/render branches.
+
+### Entry 6 — Phase 4 renderer hardening (current commit)
+
+Integrated the prescribed maintained libraries into render-service:
+`@mozilla/readability` + `jsdom` now return extracted main content alongside
+raw HTML, `robots-parser` blocks disallowed render targets, and `bottleneck`
+serializes/paces rendering per hostname. Existing raw HTML remains present as
+a non-breaking fallback. This hardens the current Playwright escalation tier
+without moving n8n pipeline execution into execution-fabric.
+
+Files touched: `render-service/src/content-extractor.js`,
+`render-service/src/fetch-policy.js`, `render-service/src/renderer.js`,
+`render-service/src/routes/fetch.js`, `render-service/test/content-extractor.test.js`,
+`render-service/package.json`, `render-service/package-lock.json`.
+Test status: `npm --prefix render-service test` (1/1 pass),
+`npm --prefix render-service run check` (pass), `git diff --check` (pass).
+
+RESUME FROM HERE: commit and push Entry 6, then add Phase 5's `org_registry`
+migration and canonical apply-link resolver, preserving official links over
+third-party sources.

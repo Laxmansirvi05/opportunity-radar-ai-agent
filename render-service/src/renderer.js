@@ -5,6 +5,7 @@ const logger = require('./logger');
 const browserManager = require('./browserManager');
 const { applyResourceBlocking } = require('./resourceBlocking');
 const { waitForCloudflareClearance, isCloudflareChallenge } = require('./cloudflare');
+const { extractMainContent } = require('./content-extractor');
 const { AppError, NavigationError, RenderTimeoutError, CloudflareChallengeError, BrowserCrashError } = require('./errors');
 
 function sleep(ms) {
@@ -112,6 +113,7 @@ async function renderOnce(url, { onContextCreated } = {}) {
     }
 
     const html = await page.content();
+    const mainContent = extractMainContent(html, page.url());
     const title = await page.title();
     const finalUrl = page.url();
     const status = response.status();
@@ -131,6 +133,7 @@ async function renderOnce(url, { onContextCreated } = {}) {
 
     return {
       html,
+      mainContent,
       title,
       finalUrl,
       status,
