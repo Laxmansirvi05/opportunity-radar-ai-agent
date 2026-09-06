@@ -55,14 +55,15 @@ async function upsertOpportunity({
     `INSERT INTO opportunities
        (source_url, source_tier, content_hash, title, company, location,
         workplace_type, employment_type, description, requirements, skills,
-        apply_url, deadline, compensation_raw, raw_json, status)
+        apply_url, deadline, compensation_raw, raw_json, status, last_verified_at)
      VALUES
        ($1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10::jsonb, $11::jsonb,
-        $12, $13, $14, $15::jsonb, 'active')
+        $12, $13, $14, $15::jsonb, 'active', now())
      ON CONFLICT (content_hash) DO UPDATE
-       SET status     = 'active',
-           updated_at = now()
+       SET status           = 'active',
+           updated_at       = now(),
+           last_verified_at = now()
      RETURNING id,
                (xmax = 0) AS is_new`,
     [
@@ -108,8 +109,49 @@ async function getOpportunityById(id) {
   return rows[0] || null;
 }
 
+/**
+ * Retrieve up to `limit` opportunities that haven't been verified in `days` days
+ * and are still 'active'.
+ * Uses idx_opportunities_active_unverified.
+ *
+ * @param {number} days
+ * @param {number} limit
+ * @returns {Promise<Array<{ id: string, apply_url: string }>>}
+ */
+async function getStaleOpportunities(days, limit = 10) {
+  const pool = getPool();
+  const { rows } = await pool.query(
+    `SELECT id, apply_url FROM opportunities 
+     WHERE status = 'active' 
+       AND (last_verified_at IS NULL OR last_verified_at < now() - interval '1 day' * $1)
+     ORDER BY last_verified_at ASC NULLS FIRST
+     LIMIT $2`,
+    [days, limit]
+  );
+  return rows;
+}
+
+/**
+ * Update the verification timestamp and status.
+ *
+ * @param {string} id
+ * @param {string} status - e.g. 'active' or 'expired'
+ * @returns {Promise<void>}
+ */
+async function updateVerification(id, status) {
+  const pool = getPool();
+  await pool.query(
+    `UPDATE opportunities 
+     SET status = $1, last_verified_at = now(), updated_at = now()
+     WHERE id = $2`,
+    [status, id]
+  );
+}
+
 module.exports = Object.freeze({
   upsertOpportunity,
   findOpportunityByContentHash,
   getOpportunityById,
+  getStaleOpportunities,
+  updateVerification,
 });

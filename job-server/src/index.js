@@ -6,7 +6,9 @@ const config = require('./config');
 const { createApp } = require('./app');
 const { createPgRepository } = require('./job-repository');
 const { JobWorker } = require('./worker');
+const { FreshnessWorker } = require('./freshness-worker');
 const { createCliRunner, createStubRunner } = require('./pipeline-runner');
+const { opportunityRepository } = require('../../data');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
@@ -33,6 +35,7 @@ const runPipeline = process.env.STUB_PIPELINE
   : createCliRunner({ repoRoot: REPO_ROOT, logger });
 
 const worker = new JobWorker({ repository, runPipeline, config, logger });
+const freshnessWorker = new FreshnessWorker({ opportunityRepository, config, logger });
 const app = createApp({ repository, config, logger, onSubmit: () => worker.tick() });
 
 const server = app.listen(config.port, () => {
@@ -42,14 +45,16 @@ const server = app.listen(config.port, () => {
     stub: Boolean(process.env.STUB_PIPELINE),
   });
   worker.start();
+  freshnessWorker.start();
 });
 
 function shutdown(signal) {
   logger.info('shutting_down', { signal });
   worker.stop();
+  freshnessWorker.stop();
   server.close(() => pool.end().then(() => process.exit(0)));
 }
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-module.exports = { app, worker, repository };
+module.exports = { app, worker, freshnessWorker, repository };

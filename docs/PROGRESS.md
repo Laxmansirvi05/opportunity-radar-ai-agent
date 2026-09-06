@@ -290,8 +290,25 @@ pattern. This is deliberate:
 If a future phase adds a brand registry or community-reported fraud list,
 domain-org mismatch on a confirmed brand could be escalated to `excluded`.
 
-Files touched: `data/src/trust-screener.js`, `data/config/trust-patterns.json`,
-`data/test/trust-screener.test.js`.
-Test status: `npm --prefix data test` (13/13 pass).
+### Entry 12 — Phase 8 Freshness & Recency Verification
 
-RESUME FROM HERE: implement Phase 8 (Freshness & Recency Verification).
+Implemented PDF §9's freshness enforcement:
+
+1. **Schema support**: `data/src/repositories/opportunity-repository.js` now
+   auto-populates `last_verified_at = now()` whenever a job is inserted or updated.
+2. **FreshnessWorker**: Created `job-server/src/freshness-worker.js` which
+   piggybacks on the existing `job-server` lifecycle (instantiated alongside
+   `JobWorker`). It periodically queries for active jobs not verified in N days
+   (configurable, default 7).
+3. **HEAD validation**: The worker performs a lightweight `HEAD` request to
+   the `apply_url`. If it gets a 404/410, it updates the job `status = 'expired'`.
+   If it's alive (or 403 blocked by WAF), it updates `last_verified_at` to avoid
+   re-checking for another N days.
+4. **Exclusion**: The backend repositories (`opportunity`, `search-plan`,
+   `candidate`) natively query `WHERE status = 'active'`. Therefore, marking a
+   job as `expired` automatically excludes it from all downstream pipelines.
+
+Test status: Added integration test for `FreshnessWorker` simulating dead/alive
+URLs. `npm --prefix job-server test` (29/29 pass).
+
+RESUME FROM HERE: Implement Phase 9 (Geographic Exclusion & Routing).
