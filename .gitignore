@@ -48,3 +48,18 @@ test_output.json
 *_run.txt
 n8n_output.*
 parse_output.js
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Scratch / generated temp files
+.playwright-mcp/
+.nodes_summary.txt
+.temp_nodes.json
+default-settings.yml
+*.pdf
+!test-resumes/*.pdf

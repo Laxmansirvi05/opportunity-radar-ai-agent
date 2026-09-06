@@ -70,7 +70,14 @@ function keyPool(env, name) {
       openrouter: Object.freeze({
         apiKey: required("OPENROUTER_API_KEY", env.OPENROUTER_API_KEY),
         apiKeys: keyPool(env, "OPENROUTER_API_KEY"),
-        model: env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free"
+        // NEVER DO: Do not use "openrouter/auto" or any non-":free" model string here.
+        // "auto" defaults to paid models and will fail with a 402 error if no credits exist.
+        // We require a fallback chain of strictly free-tier models to prevent the pipeline from breaking.
+        models: env.OPENROUTER_MODEL ? [env.OPENROUTER_MODEL] : [
+          "openrouter/liquid/lfm-2.5-2.6b:free",
+          "openrouter/nvidia/nemotron-3.5-lightning:free",
+          "openrouter/dots-studio/dots-3-note-preview:free"
+        ]
       })
     })
   });
