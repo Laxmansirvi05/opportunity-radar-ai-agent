@@ -114,7 +114,7 @@ Test status: `node --test test/workflow/loop-batching.test.js` (6/6 pass),
 Push status: local-only; sandbox GitHub egress block is tracked in
 `docs/NEEDS_FROM_HUMAN.md` item 5.
 
-### Entry 3 — Fix B completed (current commit, local-only)
+### Entry 3 — Fix B completed (commit `45c43b1`)
 
 Confirmed the mismatch was once real (the workflow used `GATEWAY_API_KEY`;
 commit `616334a` corrected it to `RENDER_SERVICE_API_KEY`) and remains
@@ -132,10 +132,20 @@ Test status: `npm --prefix job-server test` (28/28 pass),
 `npm --prefix job-server run check` (pass), render-service module load (pass),
 `git diff --check` (pass).
 
-Push status: local-only; sandbox GitHub egress block is tracked in
-`docs/NEEDS_FROM_HUMAN.md` item 5.
+### Entry 4 — Fixes A and B published
 
-RESUME FROM HERE: commit the Fix B render-service authentication preflight
-with only the files listed in Entry 3 plus this append-only progress update,
-attempt the required push, then begin Phase 3 by reading the plan's provider
-interface requirements and the existing search-planner implementation.
+The batch-loop fix (`903cadf`) and render-auth preflight (`45c43b1`) were
+merged with remote documentation commit `8211305` as `17871f3` and pushed to
+`origin/main`. The prior GitHub egress issue is not currently reproducing;
+keep attempting the required push after each meaningful commit and only treat
+`docs/NEEDS_FROM_HUMAN.md` item 5 as active if it returns.
+
+Files touched: `README.md` (remote-only merge), `docs/PROGRESS.md`.
+Test status: no code changed by the merge; the Entry 3 test suite remains
+green.
+
+RESUME FROM HERE: begin Phase 3 by reading the plan's provider-interface
+requirements and existing `search-planner` implementation. Before writing
+custom provider code, inspect the JobSpy, SearxNG, TinyFish, and
+SimplifyJobs integration surfaces and record any real external-key blocker in
+`docs/NEEDS_FROM_HUMAN.md` while keeping an optional stub/fallback.
