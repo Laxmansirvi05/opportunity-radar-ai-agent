@@ -54,3 +54,38 @@ test('createCliRunner is configured to kill the tree on timeout', () => {
   assert.match(src, /process\.kill\(-child\.pid/, 'timeout must signal the process group');
   assert.match(src, /SIGKILL/, 'must escalate if SIGTERM is ignored');
 });
+
+const { extractResponse } = require('../src/pipeline-runner');
+
+/**
+ * Build an n8n CLI dump where Build Response ran `slices.length` times, each
+ * run carrying the given number of opportunities. Mirrors the multi-run output
+ * splitInBatches produces when the loop body reconverges without a Merge node.
+ */
+function dumpWithRuns(slices) {
+  const runs = slices.map((n, r) => ({
+    data: { main: [[{ json: { run: r, opportunities: Array.from({ length: n }, (_, i) => i) } }]] },
+  }));
+  return JSON.stringify({ data: { resultData: { runData: { 'Build Response': runs } } } });
+}
+
+test('extractResponse returns the LAST Build Response run, not the first', () => {
+  // The exact shape of the batchSize bug: earlier runs are partial, the last
+  // is complete. Returning the first would hand the student 5 of 10.
+  const out = extractResponse(dumpWithRuns([5, 8, 10]));
+  assert.equal(out.run, 2, 'must read the final run');
+  assert.equal(out.opportunities.length, 10, 'the final run carries the complete set');
+});
+
+test('extractResponse still works for a single Build Response run', () => {
+  const out = extractResponse(dumpWithRuns([7]));
+  assert.equal(out.run, 0);
+  assert.equal(out.opportunities.length, 7);
+});
+
+test('extractResponse surfaces the failing node when Build Response never ran', () => {
+  const dump = JSON.stringify({
+    data: { resultData: { runData: { 'Some Node': [] }, error: { node: { name: 'playwright' }, message: 'boom' } } },
+  });
+  assert.throws(() => extractResponse(dump), /pipeline failed at playwright: boom/);
+});

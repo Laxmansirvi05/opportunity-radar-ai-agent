@@ -26,7 +26,24 @@ const N8N_FILE = process.env.RESUME_INPUT_PATH
   || path.join(os.homedir(), '.n8n-files', 'resume-input.pdf');
 const WORKFLOW_ID = '3bwLRC7IC0yDFog7';
 
-/** Pull the Build Response payload out of an n8n CLI execution dump. */
+/**
+ * Pull the Build Response payload out of an n8n CLI execution dump.
+ *
+ * Reads the LAST Build Response run, not the first. Build Response can run more
+ * than once for a single execution: the loop body reconverges at Clean HTML and
+ * again at JSON Parse without a Merge node, so a batch spanning both branches
+ * feeds the loop back twice per iteration, and splitInBatches emits its done
+ * branch on every delivery that finds its queue already drained.
+ *
+ * Each such run carries a strictly larger slice of the results, so the last one
+ * is the complete set. Taking the first would serve a partial answer as if it
+ * were the whole thing — measured at batchSize 5: three runs carrying 5, 8 and
+ * 10 of 10 opportunities, and the student would have received the 5.
+ * See tests/workflow/loop-batching.test.js for the mechanism.
+ *
+ * `Loop Over Items` is pinned to batchSize 1, which yields exactly one run, so
+ * this is a second line of defence for that cap rather than a substitute for it.
+ */
 function extractResponse(stdout) {
   let i = stdout.indexOf('{\n  "data"');
   if (i === -1) i = stdout.indexOf('{"data"');
@@ -46,8 +63,10 @@ function extractResponse(stdout) {
       ? `pipeline failed at ${err.node?.name || 'unknown node'}: ${err.message}`
       : 'pipeline produced no Build Response');
   }
-  for (const run of br) {
-    for (const branch of run?.data?.main || []) {
+  // Walk runs newest-first and return the first item found: the last run to
+  // emit is the one that saw every processed item.
+  for (let r = br.length - 1; r >= 0; r -= 1) {
+    for (const branch of br[r]?.data?.main || []) {
       for (const item of branch || []) {
         if (item && item.json) return item.json;
       }
