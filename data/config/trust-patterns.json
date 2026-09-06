@@ -1,0 +1,88 @@
+{
+  "_doc": "Editable trust-screening patterns for Phase 7 fraud detection. Add new patterns here — the code reads this file at startup, not inline.",
+
+  "suspicious_keywords": {
+    "_doc": "If ANY of these patterns match the listing description or requirements, flag it.",
+    "payment_requests": [
+      "pay.*fee",
+      "processing fee",
+      "registration fee",
+      "security deposit",
+      "pay.*to apply",
+      "pay.*₹",
+      "pay.*\\$",
+      "refundable deposit",
+      "advance payment",
+      "payment required",
+      "send money",
+      "wire transfer",
+      "western union",
+      "moneygram"
+    ],
+    "credential_harvesting": [
+      "send.*password",
+      "share.*otp",
+      "bank account.*details",
+      "credit card.*number",
+      "ssn",
+      "social security",
+      "aadhaar.*number",
+      "pan card.*number",
+      "passport.*copy"
+    ],
+    "unrealistic_offers": [
+      "guaranteed.*placement",
+      "earn.*\\d{5,}.*per.*month.*no.*experience",
+      "no experience.*needed.*\\$\\d{4,}",
+      "100%.*job.*guarantee",
+      "work from home.*earn.*lakh",
+      "earn.*lakhs.*easily",
+      "unlimited earning",
+      "get rich"
+    ],
+    "mlm_pyramid": [
+      "multi.*level.*marketing",
+      "network marketing.*opportunity",
+      "mlm",
+      "pyramid",
+      "recruit.*members",
+      "downline",
+      "refer.*and.*earn.*join"
+    ]
+  },
+
+  "trusted_ats_domains": [
+    "greenhouse.io",
+    "lever.co",
+    "ashbyhq.com",
+    "workdayjobs.com",
+    "myworkdayjobs.com",
+    "smartrecruiters.com",
+    "icims.com",
+    "taleo.net",
+    "successfactors.eu",
+    "brassring.com",
+    "jobvite.com",
+    "ultipro.com",
+    "applytojob.com"
+  ],
+
+  "suspicious_tld_patterns": [
+    "\\.xyz$",
+    "\\.top$",
+    "\\.buzz$",
+    "\\.click$",
+    "\\.loan$",
+    "\\.gq$",
+    "\\.ml$",
+    "\\.tk$",
+    "\\.cf$",
+    "\\.ga$"
+  ],
+
+  "description_completeness": {
+    "_doc": "Minimum fields expected in a well-formed listing. Missing fields reduce trust but don't auto-exclude.",
+    "required_signals": ["title", "company", "description"],
+    "quality_signals": ["location", "requirements", "skills", "apply_url", "employment_type"]
+  }
+}
