@@ -190,3 +190,21 @@ Test status: `npm --prefix render-service test` (1/1 pass),
 RESUME FROM HERE: commit and push Entry 6, then add Phase 5's `org_registry`
 migration and canonical apply-link resolver, preserving official links over
 third-party sources.
+
+### Entry 7 — Phase 5 canonical link foundation (current commit)
+
+Added the `org_registry` migration and a deterministic canonical-link resolver.
+It explicitly rejects LinkedIn direct paths and ranks organization-owned
+domains ahead of official ATS domains, then third-party sources. This provides
+the safe cached domain foundation for future search/browser escalation without
+scraping a prohibited source.
+
+Files touched: `data/migrations/014_org_registry.sql`,
+`data/src/canonical-link-resolver.js`, `data/test/canonical-link-resolver.test.js`,
+`data/package.json`.
+Test status: `npm --prefix data test` (1/1 pass), `npm --prefix data run check`
+(pass), `git diff --check` (pass). Migration needs a local PostgreSQL service
+to execute; Docker availability remains in `NEEDS_FROM_HUMAN.md` item 1.
+
+RESUME FROM HERE: commit and push Entry 7, then implement Phase 6 fuzzy and
+semantic duplicate detection against the existing `content_hash` data path.
