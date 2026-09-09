@@ -114,6 +114,17 @@ node tools/verify-contract.js
 
 Use the first check for workflow invariants and the second to catch API response-contract drift. For changes that affect a running service, also exercise its health endpoint from the runbook before deploying.
 
+## 🧪 Browser tests
+
+The Playwright suite can run against any environment by setting `PLAYWRIGHT_BASE_URL`:
+
+```bash
+npm test
+PLAYWRIGHT_BASE_URL=https://staging.example.com npm run test:e2e
+npm run test:e2e:ui
+```
+
+`npm test` and the CI command run the same suite. In CI, Playwright uses a concise line reporter; local runs keep the HTML reporter for interactive debugging.
 
 ## API
 
