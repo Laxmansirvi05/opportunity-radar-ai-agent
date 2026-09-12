@@ -12,7 +12,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? 'line' : 'html',
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || undefined,
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://playwright.dev',
     trace: 'on-first-retry',
   },
   projects: [
